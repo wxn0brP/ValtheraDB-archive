@@ -1,0 +1,4 @@
+fasl-output/
+*.fasl
+*.lib
+tmp/
