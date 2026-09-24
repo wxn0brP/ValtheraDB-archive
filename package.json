@@ -1,0 +1,43 @@
+{
+	"name": "@wxn0brp/db-redis-cache",
+	"version": "0.0.1",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"description": "Redis cache plugin for ValtheraDB",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/wxn0brP/ValtheraDB-redis-cache.git"
+	},
+	"homepage": "https://github.com/wxn0brP/ValtheraDB-redis-cache",
+	"author": "wxn0brP",
+	"license": "MIT",
+	"type": "module",
+	"scripts": {
+		"build": "tsc && tsc-alias"
+	},
+	"devDependencies": {
+		"@types/bun": "*",
+		"@wxn0brp/biome": "*",
+		"@wxn0brp/db-core": "^0.12.3",
+		"tsc-alias": "^1",
+		"typescript": "^7"
+	},
+	"peerDependencies": {
+		"@wxn0brp/db-core": "^0.12.3"
+	},
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./*": {
+			"types": "./dist/*.d.ts",
+			"import": "./dist/*.js",
+			"default": "./dist/*.js"
+		}
+	}
+}
