@@ -1,4 +1,5 @@
 import { ValtheraCreate } from "@wxn0brp/db";
+import { VQuery } from "@wxn0brp/db-core/types/query";
 import FalconFrame from "@wxn0brp/falcon-frame";
 import { deserializeFunctions } from "@wxn0brp/wts-run-fn";
 import path from "path";
@@ -14,9 +15,12 @@ app.setOrigin([
 
 app.post("/db/:type", async (req, res) => {
 	const { type } = req.params;
-	const { keys, query } = req.body;
+	const { keys, query } = req.body as {
+		keys: string[][];
+		query: VQuery;
+	};
 
-	if (!type || typeof (db as any)[type] !== "function") {
+	if (!type || typeof db[type] !== "function") {
 		res.status(400);
 		return {
 			err: true,
@@ -27,8 +31,17 @@ app.post("/db/:type", async (req, res) => {
 	console.log(str);
 
 	try {
-		const parsedParams = deserializeFunctions(query, keys || []);
-		const result = await (db as any)[type](parsedParams);
+		let result: any = null;
+
+		if (type === "getCollections") {
+			result = await db.getCollections();
+		} else if (type.includes("Collection")) {
+			result = await db[type](query.collection);
+		} else {
+			const parsedParams = deserializeFunctions(query, keys || []);
+			result = await db[type](parsedParams);
+		}
+
 		return {
 			err: false,
 			result,
