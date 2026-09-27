@@ -19,6 +19,8 @@ export class SQLiteValthera extends ActionsBase {
 	_pendingStmts = new Map<string, Promise<VStatement>>();
 	_tableColumns = new Map<string, Set<string>>();
 	_tableAffinities = new Map<string, AffinityMap>();
+	_txActive = false;
+	_txWaiters: Array<() => void> = [];
 	version = version;
 
 	constructor(
@@ -26,6 +28,20 @@ export class SQLiteValthera extends ActionsBase {
 		public primaryKey: Record<string, string> = {},
 	) {
 		super();
+	}
+
+	async _waitForTx() {
+		if (!this._txActive) return;
+		return await new Promise<void>(resolve => {
+			this._txWaiters.push(resolve);
+		});
+	}
+
+	_releaseTx() {
+		this._txActive = false;
+		const waiters = this._txWaiters;
+		this._txWaiters = [];
+		for (const w of waiters) w();
 	}
 
 	async _getTableInfo(collection: string): Promise<Record<string, string>> {
@@ -143,6 +159,7 @@ export class SQLiteValthera extends ActionsBase {
 	}
 
 	async add(config: VQueryT.Add): Promise<Data> {
+		if (!config.transaction) await this._waitForTx();
 		const { data, collection } = config;
 		await addId(config, this, true);
 
@@ -166,11 +183,13 @@ export class SQLiteValthera extends ActionsBase {
 		return data;
 	}
 
-	find(config: VQueryT.Find) {
+	async find(config: VQueryT.Find) {
+		if (!config.transaction) await this._waitForTx();
 		return find(this, config);
 	}
 
 	async findOne(config: VQueryT.Find) {
+		if (!config.transaction) await this._waitForTx();
 		config.dbFindOpts = {
 			limit: 1,
 		};
@@ -178,20 +197,24 @@ export class SQLiteValthera extends ActionsBase {
 		return result.length ? result[0] : null;
 	}
 
-	update(config: VQueryT.Update) {
+	async update(config: VQueryT.Update) {
+		if (!config.transaction) await this._waitForTx();
 		return update(this, config, false);
 	}
 
 	async updateOne(config: VQueryT.Update) {
+		if (!config.transaction) await this._waitForTx();
 		const res = await update(this, config, true);
 		return res[0] || null;
 	}
 
-	remove(config: VQueryT.Remove) {
+	async remove(config: VQueryT.Remove) {
+		if (!config.transaction) await this._waitForTx();
 		return remove(this, config, false);
 	}
 
 	async removeOne(config: VQueryT.Remove) {
+		if (!config.transaction) await this._waitForTx();
 		const res = await remove(this, config, true);
 		return res[0] || null;
 	}
@@ -223,8 +246,10 @@ export class SQLiteValthera extends ActionsBase {
 	}
 
 	async beginTransaction(id: Id): Promise<TransactionHandle> {
+		await this._waitForTx();
 		const stmt = await this._prepare("BEGIN");
 		await execStmt(stmt, "run");
+		this._txActive = true;
 		return {
 			id,
 		};
@@ -233,14 +258,17 @@ export class SQLiteValthera extends ActionsBase {
 	async commitTransaction(handle: TransactionHandle) {
 		const stmt = await this._prepare("COMMIT");
 		await execStmt(stmt, "run");
+		this._releaseTx();
 	}
 
 	async rollbackTransaction(handle: TransactionHandle) {
 		const stmt = await this._prepare("ROLLBACK");
 		await execStmt(stmt, "run");
+		this._releaseTx();
 	}
 
 	async createIndex(config: VQueryT.CreateIndex) {
+		await this._waitForTx();
 		const { collection, index } = config;
 		const { fields, opts } = index;
 
