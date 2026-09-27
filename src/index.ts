@@ -239,6 +239,19 @@ export class SQLiteValthera extends ActionsBase {
 		const stmt = await this._prepare("ROLLBACK");
 		await execStmt(stmt, "run");
 	}
+
+	async createIndex(config: VQueryT.CreateIndex) {
+		const { collection, index } = config;
+		const { fields, opts } = index;
+
+		const indexName = opts?.name || `idx_${collection}_${fields.join("_")}`;
+		const uniqueStr = opts?.unique ? "UNIQUE " : "";
+		const fieldsStr = fields.map(f => qid(f)).join(", ");
+
+		const sql = `CREATE ${uniqueStr}INDEX IF NOT EXISTS ${qid(indexName)} ON ${qid(collection)} (${fieldsStr})`;
+		const stmt = await this._prepare(sql);
+		await execStmt(stmt, "run");
+	}
 }
 
 export function createSQLiteValthera<T extends Record<string, Data> = {}>(
