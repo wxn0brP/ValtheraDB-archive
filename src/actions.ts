@@ -482,4 +482,18 @@ export class MongoDbAction extends ActionsBase {
 		await session.endSession();
 		this._session = null;
 	}
+
+	async createIndex(config: VQueryT.CreateIndex) {
+		const { collection, index } = config;
+		const { fields, opts } = index;
+		const coll = this._getCollection(collection);
+		const keys: Record<string, 1> = {};
+		for (const field of fields) {
+			keys[field] = 1;
+		}
+		await coll.createIndex(keys, {
+			unique: opts?.unique,
+			name: opts?.name,
+		});
+	}
 }
