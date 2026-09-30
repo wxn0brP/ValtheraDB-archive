@@ -15,4 +15,5 @@ export const VALID_DOMAINS: TestDomain[] = [
 	"edge-cases",
 	"events",
 	"collection-api",
+	"transaction",
 ];

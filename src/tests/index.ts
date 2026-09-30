@@ -19,6 +19,7 @@ import { removeTests } from "./remove";
 import { searchAdvancedTests } from "./search-advanced";
 import { searchOpTests } from "./search-op";
 import { sortingEdgeCasesTests } from "./sorting-edge-cases";
+import { transactionTests } from "./transaction";
 import { updateTests } from "./update";
 import { updateOpTests } from "./update-op";
 
@@ -45,4 +46,5 @@ export const tests: TestDefinition[] = [
 	...operatorInteractionsTests,
 	...advancedAggregationsTests,
 	...sortingEdgeCasesTests,
+	...transactionTests,
 ];
