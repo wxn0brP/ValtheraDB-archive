@@ -7,6 +7,7 @@ import type {
 	TestDomain,
 	TestResult,
 } from "./types";
+import { verbose } from "./verbose";
 
 function shouldSkipTest(
 	test: {
@@ -45,7 +46,7 @@ function filterTests(opts?: RunnerOptions) {
 
 export async function runTests(
 	adapterFactory: AdapterFactory,
-	opts?: RunnerOptions,
+	opts: RunnerOptions,
 ): Promise<RunnerResult> {
 	// Wrap adapter factory to return a ValtheraClass instance
 	const dbFactory = async () => {
@@ -66,6 +67,7 @@ export async function runTests(
 
 	for (const test of testList) {
 		const skip = shouldSkipTest(test, opts);
+		verbose(`- ${test.domain}.${test.name}`);
 
 		if (skip) {
 			results.push({
@@ -75,6 +77,7 @@ export async function runTests(
 				duration: 0,
 			});
 			skipped++;
+			verbose(`  Skipped`);
 			continue;
 		}
 
@@ -90,6 +93,7 @@ export async function runTests(
 				duration,
 			});
 			passed++;
+			verbose(`  Passed`);
 		} catch (err: any) {
 			const duration = performance.now() - start;
 			results.push({
@@ -100,6 +104,7 @@ export async function runTests(
 				duration,
 			});
 			failed++;
+			verbose(`  Failed: ${err?.message ?? String(err)}`);
 		}
 	}
 

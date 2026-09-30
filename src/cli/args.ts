@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
 import type { TestDomain } from "../types";
 import { VALID_DOMAINS } from "./constants";
+import { setVerbose } from "../verbose";
 
 export interface ParsedArgs {
 	adapterPath: string;
@@ -19,6 +20,7 @@ Options:
 	 Valid: ${VALID_DOMAINS.join(", ")}
   -t, --test <t>     	Run only tests matching given prefixes (comma-separated)
   -e, --exclude <e> 	Exclude specified domains (comma-separated)
+  -v, --verbose      	Print debug logs
 
 Examples:
   valthera-e2e ./valthera-e2e/index.ts
@@ -51,6 +53,10 @@ export function getArgs(): ParsedArgs {
 			exclude: {
 				type: "string",
 				short: "e",
+			},
+			verbose: {
+				type: "boolean",
+				short: "v",
 			},
 		},
 		strict: true,
@@ -108,6 +114,8 @@ export function getArgs(): ParsedArgs {
 			.map(t => t.trim())
 			.filter(Boolean);
 	}
+
+	setVerbose(values.verbose);
 
 	return {
 		adapterPath,

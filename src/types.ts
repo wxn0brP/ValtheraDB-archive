@@ -14,7 +14,8 @@ export type TestDomain =
 	| "edge-cases"
 	| "events"
 	| "collection-api"
-	| "lifecycle";
+	| "lifecycle"
+	| "transaction";
 
 export interface TestResult {
 	domain: TestDomain;
@@ -42,9 +43,9 @@ export interface AdapterFactory {
 }
 
 export interface RunnerOptions {
-	domains?: TestDomain[];
-	tests?: string[];
-	config?: SuiteConfig;
+	domains: TestDomain[];
+	tests: string[];
+	config: SuiteConfig;
 }
 
 export interface RunnerResult {
