@@ -22,7 +22,7 @@
         "build": "tsc && tsc-alias"
     },
     "dependencies": {
-        "@wxn0brp/db-core": "^0.12.4"
+        "@wxn0brp/db-core": "^0.12.5"
     },
     "devDependencies": {
         "@types/better-sqlite3": "^9.6.0",
