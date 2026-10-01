@@ -1,12 +1,15 @@
 import { CustomFileCpu } from "@wxn0brp/db-core";
 import { CustomActionsBase } from "@wxn0brp/db-core/base/custom";
 import ExcelJS from "exceljs";
-import { access, mkdir, readdir, rm, writeFile } from "fs/promises";
+import { access, mkdir, readdir, rm } from "fs/promises";
 
 export interface Opts {
 	file?: string;
 	dir?: string;
 }
+
+/** U+2400 */
+export const NULL_VALUE = "␀";
 
 export class DbStorageXlsx extends CustomActionsBase {
 	constructor(public opts: Opts) {
@@ -62,10 +65,16 @@ export class DbStorageXlsx extends CustomActionsBase {
 			for (let idx = 0; idx < headers.length; idx++) {
 				const header = headers[idx];
 				if (!header) continue;
-				const val = row.getCell(idx + 1).value;
+				const cell = row.getCell(idx + 1);
+				const val = cell.value;
+
+				const cellHasContent = cell.type !== ExcelJS.ValueType.Null;
+				if (cellHasContent) hasValue = true;
+
 				if (val !== undefined && val !== null) {
-					hasValue = true;
-					if (
+					if (val === NULL_VALUE) {
+						obj[header] = null;
+					} else if (
 						typeof val === "string" &&
 						(val.startsWith("{") || val.startsWith("["))
 					) {
@@ -77,6 +86,8 @@ export class DbStorageXlsx extends CustomActionsBase {
 					} else {
 						obj[header] = val;
 					}
+				} else if (cellHasContent) {
+					obj[header] = null;
 				}
 			}
 
@@ -112,8 +123,13 @@ export class DbStorageXlsx extends CustomActionsBase {
 			for (const key of Object.keys(row)) {
 				allKeys.add(key);
 				const val = row[key];
-				mappedRow[key] =
-					typeof val === "object" && val !== null ? JSON.stringify(val) : val;
+				if (val === null) {
+					mappedRow[key] = NULL_VALUE;
+				} else if (typeof val === "object") {
+					mappedRow[key] = JSON.stringify(val);
+				} else {
+					mappedRow[key] = val;
+				}
 			}
 			rows.push(mappedRow);
 		}
