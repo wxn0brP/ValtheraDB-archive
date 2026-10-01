@@ -102,9 +102,9 @@ export function createAccDBValthera(
 	db: SupportedDB,
 	primaryKey: Record<string, string> = {},
 ) {
-	const dbAction = new AccDBValthera(db, primaryKey);
+	const adapter = new AccDBValthera(db, primaryKey);
 	return new ValtheraClass({
-		dbAction,
+		adapter,
 	});
 }
 

@@ -24,23 +24,12 @@
     "devDependencies": {
         "@types/bun": "*",
         "@wxn0brp/biome": "*",
-        "@wxn0brp/db-core": "^0.11.1-alpha.2",
         "tsc-alias": "^1",
-        "typescript": "^6"
+        "typescript": "^7"
     },
     "dependencies": {
-        "odbc": "^2.5.0"
-    },
-    "peerDependencies": {
-        "@wxn0brp/db-core": "^0.11.1-alpha.2"
-    },
-    "peerDependenciesMeta": {
-        "@wxn0brp/db-core": {
-            "optional": false
-        },
-        "better-sqlite3": {
-            "optional": true
-        }
+        "@wxn0brp/db-core": "^0.12.5",
+        "odbc": "^2.6.0"
     },
     "files": [
         "dist"
