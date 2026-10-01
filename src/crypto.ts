@@ -22,7 +22,7 @@ export interface EncryptedActionOptionsInternal {
 }
 
 export type EncryptedActionOptions = EncryptedActionOptionsInternal &
-	Omit<DbOpts, "dbAction">;
+	Omit<DbOpts, "adapter">;
 
 export class EncryptedAction extends CustomActionsBase {
 	key: Buffer;

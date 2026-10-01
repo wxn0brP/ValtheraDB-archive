@@ -1,43 +1,42 @@
 {
-	"name": "@wxn0brp/db-storage-crypt",
-	"version": "0.0.1",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
-	"description": "",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/wxn0brP/ValtheraDB-storage-crypt.git"
-	},
-	"homepage": "https://github.com/wxn0brP/ValtheraDB-storage-crypt",
-	"author": "wxn0brP",
-	"license": "MIT",
-	"type": "module",
-	"scripts": {
-		"build": "tsc && tsc-alias"
-	},
-	"devDependencies": {
-		"@types/bun": "*",
-		"@wxn0brp/biome": "*",
-		"@wxn0brp/db-core": "^0.11.0",
-		"tsc-alias": "^1",
-		"typescript": "^6"
-	},
-	"peerDependencies": {
-		"@wxn0brp/db-core": "^0.11.0"
-	},
-	"files": [
-		"dist"
-	],
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js",
-			"default": "./dist/index.js"
-		},
-		"./*": {
-			"types": "./dist/*.d.ts",
-			"import": "./dist/*.js",
-			"default": "./dist/*.js"
-		}
-	}
+    "name": "@wxn0brp/db-storage-crypt",
+    "version": "0.0.1",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "description": "",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/wxn0brP/ValtheraDB-storage-crypt.git"
+    },
+    "homepage": "https://github.com/wxn0brP/ValtheraDB-storage-crypt",
+    "author": "wxn0brP",
+    "license": "MIT",
+    "type": "module",
+    "scripts": {
+        "build": "tsc && tsc-alias"
+    },
+    "devDependencies": {
+        "@types/bun": "*",
+        "@wxn0brp/biome": "*",
+        "tsc-alias": "^1",
+        "typescript": "^7"
+    },
+    "dependencies": {
+        "@wxn0brp/db-core": "^0.12.5"
+    },
+    "files": [
+        "dist"
+    ],
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js",
+            "default": "./dist/index.js"
+        },
+        "./*": {
+            "types": "./dist/*.d.ts",
+            "import": "./dist/*.js",
+            "default": "./dist/*.js"
+        }
+    }
 }
