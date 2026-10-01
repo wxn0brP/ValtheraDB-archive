@@ -1,0 +1,49 @@
+{
+	"name": "@wxn0brp/db-storage-rn",
+	"version": "0.120.0",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"description": "React Native AsyncStorage adapter for ValtheraDB",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/wxn0brP/ValtheraDB-storage-rn.git"
+	},
+	"homepage": "https://github.com/wxn0brP/ValtheraDB-storage-rn",
+	"author": "wxn0brP",
+	"license": "MIT",
+	"type": "module",
+	"keywords": [
+		"valthera",
+		"valtheradb",
+		"vdb-adapter",
+		"react-native",
+		"async-storage"
+	],
+	"scripts": {
+		"build": "tsc && tsc-alias"
+	},
+	"dependencies": {
+		"@wxn0brp/db-core": "^0.12.5"
+	},
+	"devDependencies": {
+		"@types/bun": "*",
+		"@wxn0brp/biome": "*",
+		"tsc-alias": "^1",
+		"typescript": "^7"
+	},
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./*": {
+			"types": "./dist/*.d.ts",
+			"import": "./dist/*.js",
+			"default": "./dist/*.js"
+		}
+	}
+}
