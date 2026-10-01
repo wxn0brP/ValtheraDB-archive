@@ -29,11 +29,12 @@ export async function loadAdapter(path: string): Promise<AdapterFactory> {
 export async function validateAdapterFactory(
 	adapterFactory: AdapterFactory,
 ): Promise<void> {
+	let db: ValtheraClass = null;
 	try {
 		const adapter = await adapterFactory();
 		if (!adapter) throw new Error("Adapter factory returned null or undefined");
 
-		const db = new ValtheraClass({
+		db = new ValtheraClass({
 			adapter,
 		});
 		await db.init();
@@ -60,6 +61,8 @@ export async function validateAdapterFactory(
 	} catch (err: any) {
 		console.error(`Error: Adapter initialization failed`);
 		console.error(`  ${err.message ?? err}`);
+		if (db) await db.close().catch(() => {});
 		process.exit(1);
 	}
+	if (db) await db.close().catch(() => {});
 }

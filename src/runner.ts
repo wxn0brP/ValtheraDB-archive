@@ -124,8 +124,9 @@ export async function runTests(
 		}
 
 		const start = performance.now();
+		let db: ValtheraClass = null;
 		try {
-			const db = await dbFactory();
+			db = await dbFactory();
 			await test.fn(db);
 			const duration = performance.now() - start;
 			results.push({
@@ -147,6 +148,8 @@ export async function runTests(
 			});
 			failed++;
 			verbose(`  Failed: ${err?.message ?? String(err)}`);
+		} finally {
+			if (db) await db.close().catch(() => {});
 		}
 	}
 
