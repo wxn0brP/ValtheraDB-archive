@@ -1,0 +1,55 @@
+name: Archive ValtheraDB repos
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      repos: ${{ steps.list.outputs.repos }}
+    steps:
+      - id: list
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          repos=$(gh repo list wxn0brP --limit 500 --json name \
+            --jq '[.[].name | select(startswith("ValtheraDB") and . != "ValtheraDB-archive")]')
+          echo "repos=$repos" >> "$GITHUB_OUTPUT"
+
+  sync:
+    needs: discover
+    if: needs.discover.outputs.repos != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        repo: ${{ fromJson(needs.discover.outputs.repos) }}
+    steps:
+      - name: Checkout archive repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Fetch source default branch and push as <repo>
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE: wxn0brP/${{ matrix.repo }}
+          TARGET: ${{ matrix.repo }}
+        run: |
+          set -euo pipefail
+
+          default_branch=$(gh api "repos/${SOURCE}" --jq '.default_branch')
+          echo "Source: ${SOURCE}, default branch: ${default_branch}"
+
+          git fetch --no-tags "https://github.com/${SOURCE}.git" \
+            "+refs/heads/${default_branch}:refs/heads/${TARGET}"
+
+          git push origin "refs/heads/${TARGET}:refs/heads/${TARGET}" --force
