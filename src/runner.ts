@@ -15,7 +15,7 @@ function shouldSkipTest(
 		name: string;
 	},
 	opts?: RunnerOptions,
-): boolean {
+) {
 	if (!opts?.config?.skip) return false;
 
 	const skip = opts.config.skip;
@@ -44,6 +44,34 @@ function filterTests(opts?: RunnerOptions) {
 	return filtered;
 }
 
+async function checkTransactionSupport(
+	dbFactory: () => Promise<ValtheraClass>,
+) {
+	let db: ValtheraClass | null = null;
+	try {
+		db = await dbFactory();
+		await db.transaction(
+			[
+				"pride",
+			],
+			async () => {},
+		);
+		await db.close();
+		return true;
+	} catch (err: any) {
+		if (db) await db.close().catch(() => {});
+		const message = err?.message ?? String(err);
+		if (
+			message.toLowerCase().includes("transactions are not supported") ||
+			message.includes("beginTransaction is not a function") ||
+			message.includes("beginTransaction is undefined")
+		) {
+			return false;
+		}
+		throw err;
+	}
+}
+
 export async function runTests(
 	adapterFactory: AdapterFactory,
 	opts: RunnerOptions,
@@ -60,6 +88,18 @@ export async function runTests(
 	};
 
 	const testList = filterTests(opts);
+	const hasTransactionTests = testList.some(t => t.domain === "transaction");
+	let transactionsSupported = true;
+
+	if (hasTransactionTests) {
+		transactionsSupported = await checkTransactionSupport(dbFactory);
+		if (!transactionsSupported) {
+			verbose(
+				"Adapter does not support transactions - transaction tests will be skipped",
+			);
+		}
+	}
+
 	const results: TestResult[] = [];
 	let passed = 0;
 	let failed = 0;
@@ -67,9 +107,11 @@ export async function runTests(
 
 	for (const test of testList) {
 		const skip = shouldSkipTest(test, opts);
+		const skipTransaction =
+			test.domain === "transaction" && !transactionsSupported;
 		verbose(`- ${test.domain}.${test.name}`);
 
-		if (skip) {
+		if (skip || skipTransaction) {
 			results.push({
 				domain: test.domain,
 				name: test.name,
