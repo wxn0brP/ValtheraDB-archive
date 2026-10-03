@@ -52,13 +52,27 @@ jobs:
           git fetch --no-tags "https://github.com/${SOURCE}.git" \
             "+refs/heads/${default_branch}:refs/heads/_tmp_${TARGET}"
 
+          source_sha=$(git rev-parse "_tmp_${TARGET}")
+
+          if git rev-parse "origin/${TARGET}" >/dev/null 2>&1; then
+            last_synced=$(git log -1 --format=%B "origin/${TARGET}" \
+              | grep -oP 'Source-commit: \K[a-f0-9]+' || true)
+            if [ "${source_sha}" = "${last_synced}" ]; then
+              echo "No new commits in ${SOURCE}, skipping sync"
+              exit 0
+            fi
+          fi
+
           git checkout "_tmp_${TARGET}"
 
           if [ -d .github/workflows ]; then
             git rm -rf .github/workflows
-            git -c user.name="github-actions[bot]" \
-                -c user.email="github-actions[bot]@users.noreply.github.com" \
-                commit -m "chore: remove workflows for archive" --allow-empty
           fi
+
+          git -c user.name="github-actions[bot]" \
+              -c user.email="github-actions[bot]@users.noreply.github.com" \
+              commit --allow-empty -m "chore: archive sync
+
+          Source-commit: ${source_sha}"
 
           git push origin "HEAD:refs/heads/${TARGET}" --force
