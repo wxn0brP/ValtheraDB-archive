@@ -20,7 +20,7 @@ export async function useCatchupServer({
 	res,
 	target,
 }: CatchupServerOpts) {
-	logger.info(
+	logger.debug(
 		"CATCHUP",
 		"[V-SQR-08-01] Using catchup server for op:",
 		req.params.op,
@@ -103,7 +103,7 @@ export async function useCatchupServerLogic(
 		};
 	}
 
-	logger.info(
+	logger.debug(
 		"CATCHUP",
 		"[V-SQR-15-05] Successfully added to catchup server:",
 		serverId,

@@ -44,6 +44,11 @@ Collection operations (`getCollections`, `ensureCollection`, `removeCollection`,
 | `SQUIRREL_SEEDS` / `SQUIRREL_SEED_<N>` | Yes | - | Space-separated seed URLs |
 | `SQUIRREL_ALLOW_FULL_SCAN` | No | `false` | Query without `_id`, broadcast to all servers |
 | `SQUIRREL_ALLOW_CATCHUP_SERVER` | No | `false` | Queue writes on catchup when primary is down |
+| `LOG_LEVEL` | No | `info` | Base log level (`debug`, `info`, `warn`, `error`) |
+| `LOG_LEVEL_FILE` | No | `LOG_LEVEL` | File log level |
+| `LOG_FILE` | No | - | Log file path (disabled if not set) |
+| `LOG_TIMESTAMP` | No | `true` | Add ISO timestamp to log lines |
+| `LOG_AUTH` | No | - | Admin token for log endpoints (endpoints disabled if not set) |
 
 ## Usage
 

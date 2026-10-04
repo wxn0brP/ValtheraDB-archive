@@ -3,6 +3,7 @@ import type { ValtheraCompatible } from "@wxn0brp/db-core/types/valthera";
 import { Router } from "@wxn0brp/falcon-frame";
 import { logger } from "./logger";
 import { registerGetData, welcomeBack } from "./router/getData";
+import { registerLogs } from "./router/logs";
 import { registerDbOp } from "./router/op";
 import { TopologyManager } from "./topology";
 import { AuthConfig, SquirrelConfig } from "./types";
@@ -80,7 +81,7 @@ export class Squirrel {
 		for (const [serverId, server] of this.topology.servers) {
 			const isUp = await this.topology.isServerUp(server.host);
 			if (isUp) {
-				logger.info("SYNC", "[V-SQR-09-11] Server is up, syncing:", serverId);
+				logger.debug("SYNC", "[V-SQR-09-11] Server is up, syncing:", serverId);
 				const result = await welcomeBack(this, serverId);
 				if (result.err) {
 					logger.warn(
@@ -90,7 +91,7 @@ export class Squirrel {
 						result.msg,
 					);
 				} else {
-					logger.info(
+					logger.debug(
 						"SYNC",
 						"[V-SQR-09-13] Sync completed for server:",
 						serverId,
@@ -116,6 +117,8 @@ export class Squirrel {
 				});
 			next();
 		});
+
+		registerLogs(this);
 
 		this.app.use((req, res, next) => {
 			const { auth, db } = req.body;

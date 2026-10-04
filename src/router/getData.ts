@@ -25,7 +25,7 @@ export async function welcomeBack(squirrel: Squirrel, _id: string) {
 			msg: "Missing id",
 		};
 
-	logger.info("SYNC", "[V-SQR-16-07] Welcome-back request for server:", _id);
+	logger.debug("SYNC", "[V-SQR-16-07] Welcome-back request for server:", _id);
 
 	const host = squirrel.topology.servers.get(_id)?.host;
 

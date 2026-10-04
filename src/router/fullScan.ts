@@ -59,7 +59,7 @@ export async function fullScanReq(
 		}
 	}
 
-	logger.info(
+	logger.debug(
 		"FULLSCAN",
 		"[V-SQR-07-05] Full scan completed, total results:",
 		findResult.length,
@@ -82,7 +82,7 @@ export async function fullScanCollectionOp(
 	servers.sort((a, b) => a[0].localeCompare(b[0]));
 	const { collection } = data;
 
-	logger.info(
+	logger.debug(
 		"FULLSCAN",
 		"[V-SQR-07-06] Full scan collection op:",
 		op,

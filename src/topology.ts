@@ -23,7 +23,7 @@ export class TopologyManager {
 		for (const seed of seeds) {
 			const server = parseServerInfo(seed);
 			if (server.id) {
-				logger.info(
+				logger.debug(
 					"TOPOLOGY",
 					"[V-SQR-01-02] Seed parsed, adding server:",
 					server.id,
@@ -35,7 +35,7 @@ export class TopologyManager {
 				continue;
 			}
 
-			logger.info(
+			logger.debug(
 				"TOPOLOGY",
 				"[V-SQR-01-04] Checking server availability:",
 				seed,
@@ -46,9 +46,9 @@ export class TopologyManager {
 				failed++;
 				continue;
 			}
-			logger.info("TOPOLOGY", "[V-SQR-01-06] Server is up:", seed);
+			logger.debug("TOPOLOGY", "[V-SQR-01-06] Server is up:", seed);
 			await this._getConfig(server.host);
-			logger.info(
+			logger.debug(
 				"TOPOLOGY",
 				"[V-SQR-01-07] Successfully fetched config from:",
 				seed,
@@ -97,7 +97,7 @@ export class TopologyManager {
 
 	addServer(server: ServerInfo) {
 		if (this.servers.has(server.id)) return;
-		logger.info(
+		logger.debug(
 			"TOPOLOGY",
 			"[V-SQR-02-01] Adding server to topology:",
 			server.id,
@@ -142,7 +142,7 @@ export class TopologyManager {
 				});
 			});
 		} catch (e) {
-			logger.info(
+			logger.warn(
 				"TOPOLOGY",
 				"[V-SQR-17-01] Failed to fetch config from:",
 				url,
@@ -193,7 +193,7 @@ export class TopologyManager {
 	}
 
 	async getCatchupServer(excludedId: string, epoch: Epoch) {
-		logger.info(
+		logger.debug(
 			"TOPOLOGY",
 			"[V-SQR-04-01] Searching for catchup server, excluding:",
 			excludedId,
@@ -224,7 +224,7 @@ export class TopologyManager {
 				);
 				const isUp = await this.isServerUp(catchup.host);
 				if (isUp) {
-					logger.info(
+					logger.debug(
 						"TOPOLOGY",
 						"[V-SQR-04-04] Found catchup server:",
 						catchupId,
