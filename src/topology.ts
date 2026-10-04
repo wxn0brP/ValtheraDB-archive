@@ -263,9 +263,12 @@ export class TopologyManager {
 	}
 
 	_hash(key: string) {
-		let h = 0;
-		for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
-		return Math.abs(h);
+		let h = 2166136261;
+		for (let i = 0; i < key.length; i++) {
+			h ^= key.charCodeAt(i);
+			h = Math.imul(h, 16777619);
+		}
+		return h >>> 0;
 	}
 
 	async initNewEpoch() {
