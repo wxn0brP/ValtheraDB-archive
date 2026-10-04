@@ -142,7 +142,6 @@ export async function fullScanCollectionOp(
 					);
 					continue;
 				}
-				console.log("ok", server.host);
 				const client = squirrel.getClient(server.host);
 				await client.removeCollection(collection);
 			}
