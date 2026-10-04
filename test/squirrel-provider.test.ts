@@ -7,7 +7,13 @@ function createApp() {
 		use() {
 			return this;
 		},
+		get() {
+			return this;
+		},
 		post() {
+			return this;
+		},
+		delete() {
 			return this;
 		},
 	} as any;
