@@ -20,11 +20,11 @@ export interface AuthConfig {
 }
 
 export interface SquirrelConfig {
-	allowFullScan?: boolean;
-	allowCatchupServer?: boolean;
-	replicationEnabled?: boolean;
-	replicationFactor?: number;
-	autoSyncOnStartup?: boolean;
+	allowFullScan: boolean;
+	allowCatchupServer: boolean;
+	replicationEnabled: boolean;
+	replicationFactor: number;
+	autoSyncOnStartup: boolean;
 }
 
 export interface ServerEpochInfo {

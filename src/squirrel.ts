@@ -29,14 +29,6 @@ export class Squirrel {
 			}),
 	) {
 		this.setupRoutes();
-		this.config = {
-			allowCatchupServer: true,
-			allowFullScan: true,
-			replicationEnabled: false,
-			replicationFactor: 3,
-			autoSyncOnStartup: true,
-			...this.config,
-		};
 	}
 
 	getClient(host: string) {

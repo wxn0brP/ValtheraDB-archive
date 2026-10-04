@@ -22,7 +22,13 @@ describe("Squirrel client provider", () => {
 				name: "db",
 				auth: "auth",
 			},
-			{},
+			{
+				allowCatchupServer: true,
+				allowFullScan: true,
+				replicationEnabled: false,
+				replicationFactor: 3,
+				autoSyncOnStartup: true,
+			},
 			host => {
 				calls.push(host);
 				return createMemoryValthera();
