@@ -1,5 +1,6 @@
 import FalconFrame from "@wxn0brp/falcon-frame";
 import { Squirrel } from "./squirrel";
+import { collectSeeds } from "./utils";
 
 const app = new FalconFrame();
 app.setOrigin("*");
@@ -20,4 +21,4 @@ const squirrel = new Squirrel(
 	},
 );
 
-squirrel.init(process.env.SQUIRREL_SEEDS.split(" "));
+squirrel.init(collectSeeds());

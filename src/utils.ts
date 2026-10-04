@@ -20,3 +20,22 @@ export function parseServerInfo(url: string): ServerInfo {
 
 	return info;
 }
+
+export function collectSeeds() {
+	const seeds: string[] = [];
+
+	const splitSeeds = (value: string): string[] =>
+		value
+			.split(" ")
+			.map(s => s.trim())
+			.filter(Boolean);
+
+	for (const [key, value] of Object.entries(process.env))
+		if (key.startsWith("SQUIRREL_SEED_") && value)
+			seeds.push(...splitSeeds(value));
+
+	if (process.env.SQUIRREL_SEEDS)
+		seeds.push(...splitSeeds(process.env.SQUIRREL_SEEDS));
+
+	return seeds;
+}
