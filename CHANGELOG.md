@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.120.3](https://github.com/wxn0brP/ValtheraDB-storage-mongodb/compare/v0.120.2...v0.120.3) (2026-10-05)
+
 ### [0.120.2](https://github.com/wxn0brP/ValtheraDB-storage-mongodb/compare/v0.120.2-alpha.0...v0.120.2) (2026-09-27)
 
 
