@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark light">
     <title>ValtheraDB Benchmark Dashboard</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <link rel="stylesheet" href="style.css">
@@ -40,7 +41,7 @@
 
         <div id="content" style="display: none;">
             <article style="--pico-font-size: 0.85rem; border-left: 6px solid var(--pico-primary);">
-                <strong style="font-size: 1rem;">📌 Notes</strong>
+                <strong style="font-size: 1rem;">Notes</strong>
                 <ul style="margin: 0.5rem 0 0; padding-left: 1.25rem;">
                     <li>All timings are computed as the average of 3 benchmark runs per operation.</li>
                     <li>
@@ -56,7 +57,8 @@
 
             <section id="local-results">
                 <h3>Local Results</h3>
-                <p style="font-size: 0.9rem; color: var(--pico-muted-color);">Upload a local benchmark result JSON file to include it in the analysis.</p>
+                <p style="font-size: 0.9rem; color: var(--pico-muted-color);">Upload a local benchmark result JSON file
+                    to include it in the analysis.</p>
                 <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
                     <input type="file" id="local-file-input" accept=".json" style="margin: 0;">
                     <button id="upload-local-btn" class="outline" style="margin: 0;">Upload</button>
@@ -70,6 +72,15 @@
                 <h2>Fastest per Operation</h2>
                 <p>Top performing adapters across all tests</p>
                 <div id="summary-cards" class="auto-grid"></div>
+                <dialog id="summary-modal">
+                    <article>
+                        <header>
+                            <button aria-label="Close" rel="prev" id="summary-modal-close"></button>
+                            <strong id="summary-modal-title"></strong>
+                        </header>
+                        <div id="summary-modal-content"></div>
+                    </article>
+                </dialog>
             </section>
 
             <section id="compare">
@@ -78,7 +89,10 @@
                 <div class="grid">
                     <div>
                         <label>
-                            Base Adapter (1x)
+                            <span class="adapter-label">
+                                <span class="adapter-dot adapter-dot-a"></span>
+                                Adapter A:
+                            </span>
                             <select id="compare-base"></select>
                         </label>
                     </div>
@@ -87,25 +101,44 @@
                     </div>
                     <div>
                         <label>
-                            Target Adapter
+                            <span class="adapter-label">
+                                <span class="adapter-dot adapter-dot-b"></span>
+                                Adapter B:
+                            </span>
                             <select id="compare-target"></select>
                         </label>
                     </div>
                 </div>
-                <div class="grid" id="compare-platforms-row" style="margin-top: 0.5rem;">
-                    <div>
-                        <label>
-                            Base Platforms (select to filter)
-                            <select id="compare-base-platforms" multiple size="5"></select>
-                        </label>
+
+                <div class="compare-platforms-section">
+                    <div class="compare-platforms-group">
+                        <label class="platforms-label">Platforms A:</label>
+                        <div id="compare-base-chips" class="platform-chips"></div>
                     </div>
-                    <div>
-                        <label>
-                            Target Platforms (select to filter)
-                            <select id="compare-target-platforms" multiple size="5"></select>
-                        </label>
+                    <div class="compare-platforms-group" style="align-items: flex-end;">
+                        <label class="platforms-label">Platforms B:</label>
+                        <div id="compare-target-chips" class="platform-chips" style="justify-content: flex-end;"></div>
                     </div>
                 </div>
+
+                <div id="compare-summary-wrapper"></div>
+
+                <div class="compare-controls">
+                    <div class="control-group">
+                        <span class="control-label">Sort by:</span>
+                        <button class="outline contrast active" data-sort="name">Name</button>
+                        <button class="outline contrast" data-sort="diff">Difference</button>
+                        <button class="outline contrast" data-sort="winner">Winner</button>
+                    </div>
+                    <div class="control-group">
+                        <span class="control-label">Filter:</span>
+                        <button class="outline contrast active" data-filter="all">All</button>
+                        <button class="outline contrast" data-filter="faster">A Faster</button>
+                        <button class="outline contrast" data-filter="slower">B Faster</button>
+                        <button class="outline contrast" data-filter="equal">Equal</button>
+                    </div>
+                </div>
+
                 <div id="compare-results" class="auto-grid" style="margin-top: 1rem;"></div>
             </section>
 
@@ -113,10 +146,15 @@
 
             <section id="tables">
                 <h2>Detailed Results</h2>
-                <label>
-                    Select Adapter:
-                    <select id="tables-adapter-select"></select>
-                </label>
+                <div style="margin-bottom: 1rem;">
+                    <label>
+                        Select Adapter:
+                        <select id="tables-adapter-select"></select>
+                    </label>
+                    <button id="tables-download-md" class="outline">
+                        Download as Markdown
+                    </button>
+                </div>
                 <div id="tables-container"></div>
             </section>
         </div>

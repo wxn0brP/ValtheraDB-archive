@@ -6,7 +6,7 @@ import {
 	renderLocalResultsList,
 } from "./local";
 import { renderSummary } from "./summary";
-import { renderTables } from "./tables";
+import { renderTables, initTablesDownload } from "./tables";
 import { ResultFile } from "./types";
 import { normalize, parseEntry } from "./utils";
 import { state } from "./var";
@@ -22,6 +22,7 @@ async function loadData() {
 		renderSummary();
 		renderCompare();
 		renderTables();
+		initTablesDownload();
 		renderLocalResultsList();
 		return;
 	}
@@ -63,6 +64,7 @@ async function loadData() {
 		renderSummary();
 		renderCompare();
 		renderTables();
+		initTablesDownload();
 		renderLocalResultsList();
 	} catch (e) {
 		console.error("Failed to load data", e);

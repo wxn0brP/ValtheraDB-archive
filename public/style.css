@@ -8,12 +8,12 @@ html {
 }
 
 .stat-faster {
-    color: var(--pico-form-element-valid-border-color);
+    color: #8b5cf6;
     font-weight: bold;
 }
 
 .stat-slower {
-    color: var(--pico-form-element-invalid-border-color);
+    color: #06b6d4;
     font-weight: bold;
 }
 
@@ -124,4 +124,283 @@ header.sticky nav li {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: var(--pico-spacing);
+}
+
+.show-all-btn {
+    margin-top: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    width: 100%;
+}
+
+#summary-modal {
+    max-width: 600px;
+}
+
+#summary-modal article {
+    margin: 0;
+}
+
+#summary-modal header {
+    margin-bottom: 1rem;
+}
+
+#summary-modal-content {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 15px;
+}
+
+.adapter-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+.adapter-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.adapter-dot-a {
+    background: #8b5cf6;
+}
+
+.adapter-dot-b {
+    background: #06b6d4;
+}
+
+.compare-platforms-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.compare-platforms-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.platforms-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.platform-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.platform-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--pico-muted-border-color);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: transform 0.2s;
+    background: var(--pico-background-color);
+    user-select: none;
+}
+
+.platform-chip:hover {
+    transform: translateY(-2px);
+}
+
+.platform-chip.active {
+    background: var(--pico-primary-focus);
+    color: var(--pico-primary);
+    border-color: var(--pico-primary);
+}
+
+#compare-summary-wrapper {
+    margin-top: 1.5rem;
+}
+
+#compare-summary {
+    background: var(--pico-card-background-color);
+    border: 1px solid var(--pico-muted-border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.summary-winner {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    text-align: center;
+}
+
+.summary-stats {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.summary-stat {
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    background: var(--pico-muted-border-color);
+}
+
+.summary-bar {
+    display: flex;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--pico-muted-border-color);
+}
+
+.bar-a {
+    background: #8b5cf6;
+    transition: width 0.3s ease;
+}
+
+.bar-equal {
+    background: var(--pico-muted-color);
+    transition: width 0.3s ease;
+}
+
+.bar-b {
+    background: #06b6d4;
+    transition: width 0.3s ease;
+}
+
+.compare-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.control-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--pico-muted-color);
+}
+
+.control-group button {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.control-group button.active {
+    background: var(--pico-primary);
+    color: var(--pico-primary-inverse);
+    border-color: var(--pico-primary);
+}
+
+.compare-card {
+    padding: 1rem;
+    margin-bottom: 0;
+    cursor: help;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.compare-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.compare-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.compare-card-header code {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.compare-badge {
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.compare-badge.stat-faster {
+    background: #8b5cf6;
+    color: white;
+}
+
+.compare-badge.stat-slower {
+    background: #06b6d4;
+    color: white;
+}
+
+.compare-badge.stat-equal {
+    background: var(--pico-muted-color);
+    color: white;
+}
+
+.compare-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+}
+
+.compare-bar-label {
+    width: 80px;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+}
+
+.bar-track {
+    flex: 1;
+    height: 12px;
+    background: var(--pico-muted-border-color);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.4s ease;
+}
+
+.bar-fill.bar-a {
+    background: #8b5cf6;
+}
+
+.bar-fill.bar-b {
+    background: #06b6d4;
+}
+
+@media (max-width: 768px) {
+    .compare-platforms-section {
+        grid-template-columns: 1fr;
+    }
+
+    .compare-controls {
+        flex-direction: column;
+    }
+
+    .control-group {
+        flex-wrap: wrap;
+    }
 }

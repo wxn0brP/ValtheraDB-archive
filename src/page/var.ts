@@ -1,11 +1,5 @@
 import { Entry } from "./types";
 
-export const medals = [
-	"🥇",
-	"🥈",
-	"🥉",
-];
-
 export const OP_ORDER_SMALL = [
 	"add-small",
 	"findOne-small",
