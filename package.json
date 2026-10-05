@@ -11,11 +11,11 @@
     "license": "MIT",
     "type": "module",
     "dependencies": {
-        "@wxn0brp/db-core": "^0.11.1",
-        "@wxn0brp/db-storage-dir": "^0.110.1"
+        "@wxn0brp/db-core": "^0.12.7",
+        "@wxn0brp/db-storage-dir": "^0.120.3"
     },
     "devDependencies": {
         "@types/bun": "*",
-        "typescript": "^6"
+        "typescript": "^7"
     }
 }
