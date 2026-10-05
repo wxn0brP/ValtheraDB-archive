@@ -11,10 +11,12 @@ import { optimize } from "./bin/optimize";
 import { remove } from "./bin/remove";
 import { COLLECTION_HEADER_SIZE } from "./bin/static";
 import { update } from "./bin/update";
+import { version } from "./version";
 
 export class BinAdapter extends ActionsBase {
 	public readonly manager: BinManager;
 	_inited = false;
+	version = version;
 
 	constructor(path: string, options?: Partial<Options>) {
 		super();
