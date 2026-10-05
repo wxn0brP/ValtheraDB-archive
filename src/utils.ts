@@ -9,6 +9,7 @@ const noNpmAdapter = [
 	"accdb",
 	"length",
 	"crypt",
+	"xlsx",
 ].reduce((acc, key) => {
 	acc[`@wxn0brp/db-storage-${key}`] = `wxn0brP/ValtheraDB-storage-${key}`;
 	return acc;
