@@ -1,5 +1,5 @@
 import { ValtheraClass } from "@wxn0brp/db-core";
-import { createFileActions } from "@wxn0brp/db-storage-dir";
+import { createFileAdapter } from "@wxn0brp/db-storage-dir";
 import { ConduitError } from "./errors";
 
 interface DbSlot {
@@ -25,8 +25,10 @@ export class DbRegistry {
 			);
 
 		const db = new ValtheraClass({
-			dbAction: createFileActions(dir, opts),
-			numberId: Boolean(opts.numberId),
+			adapter: createFileAdapter(dir, opts),
+			adapterOpts: {
+				numberId: Boolean(opts.numberId),
+			},
 		});
 		await db.init();
 		this._dbs.set(name, {
