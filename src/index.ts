@@ -12,65 +12,65 @@ const reader = new FrameReader();
 let shuttingDown = false;
 
 function writeFrame(type: OutboundFrameType, dbName: string, payload: unknown) {
-    process.stdout.write(encodeJsonFrame(type, dbName, payload));
+	process.stdout.write(encodeJsonFrame(type, dbName, payload));
 }
 
 writeFrame(OutboundFrameType.Ready, "", {
-    ok: true,
-    result: conduitInfo,
+	ok: true,
+	result: conduitInfo,
 });
 
 process.stdin.on("data", (chunk: Buffer) => {
-    void handleChunk(chunk);
+	void handleChunk(chunk);
 });
 
 process.stdin.on("end", () => {
-    void shutdown(0);
+	void shutdown(0);
 });
 
 process.on("SIGINT", () => {
-    void shutdown(130);
+	void shutdown(130);
 });
 
 process.on("SIGTERM", () => {
-    void shutdown(143);
+	void shutdown(143);
 });
 
 async function handleChunk(chunk: Buffer) {
-    if (shuttingDown) return;
+	if (shuttingDown) return;
 
-    let frames;
-    try {
-        frames = reader.push(chunk);
-    } catch (error) {
-        writeFrame(OutboundFrameType.Error, "", toErrorPayload(error));
-        await shutdown(1);
-        return;
-    }
+	let frames;
+	try {
+		frames = reader.push(chunk);
+	} catch (error) {
+		writeFrame(OutboundFrameType.Error, "", toErrorPayload(error));
+		await shutdown(1);
+		return;
+	}
 
-    for (const frame of frames) {
-        void handleFrame(frame);
-    }
+	for (const frame of frames) {
+		void handleFrame(frame);
+	}
 }
 
 async function handleFrame(frame: Parameters<typeof dispatchFrame>[1]) {
-    try {
-        const response = await dispatchFrame(registry, frame);
-        writeFrame(response.type, frame.dbName, response.payload);
-        if (response.shutdown) await shutdown(0);
-    } catch (error) {
-        writeFrame(OutboundFrameType.Error, frame.dbName, toErrorPayload(error));
-    }
+	try {
+		const response = await dispatchFrame(registry, frame);
+		writeFrame(response.type, frame.dbName, response.payload);
+		if (response.shutdown) await shutdown(0);
+	} catch (error) {
+		writeFrame(OutboundFrameType.Error, frame.dbName, toErrorPayload(error));
+	}
 }
 
 async function shutdown(code: number) {
-    if (shuttingDown) return;
-    shuttingDown = true;
-    try {
-        await registry.closeAll();
-    } catch (error) {
-        console.error(error);
-    } finally {
-        process.exit(code);
-    }
+	if (shuttingDown) return;
+	shuttingDown = true;
+	try {
+		await registry.closeAll();
+	} catch (error) {
+		console.error(error);
+	} finally {
+		process.exit(code);
+	}
 }
