@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.120.1](https://github.com/wxn0brP/ValtheraDB-storage-bin/compare/v0.120.0...v0.120.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* findOne perf ([0d66dec](https://github.com/wxn0brP/ValtheraDB-storage-bin/commit/0d66decce7b9c0557025565807647a7d7e510e7e))
+
 ## [0.120.0](https://github.com/wxn0brP/ValtheraDB-storage-bin/compare/v0.110.0...v0.120.0) (2026-10-05)
 
 
