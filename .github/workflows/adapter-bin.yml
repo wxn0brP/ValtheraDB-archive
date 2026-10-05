@@ -43,7 +43,7 @@ jobs:
       adapter: "bin"
       ver: ${{ matrix.ver }}
       os: ${{ matrix.os }}
-      install: "@wxn0brp/db-storage-bin@0.110.0-alpha.0 @wxn0brp/db-core@0.11.0"
+      install: ""
       setup: ""
     secrets: inherit
 
