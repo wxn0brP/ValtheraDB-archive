@@ -54,8 +54,45 @@ export async function findOne(
 		return findObj(config, obj);
 	}
 
-	const items = await findAll(cmp, collection, config);
-	return items.length ? items[0] : null;
+	if (collection.header.used <= COLLECTION_HEADER_SIZE) return null;
+
+	const collectionEnd = collection.headerOffset + collection.header.used;
+	let cursor = collection.headerOffset + COLLECTION_HEADER_SIZE;
+
+	while (cursor < collectionEnd) {
+		const headerBuf = await readAt(cmp.fd, cursor, READ_HEADER_MAX);
+		if (headerBuf.length === 0) break;
+
+		const headerProbe = decodeRecord(headerBuf, 0);
+		if (!headerProbe) break;
+
+		if (headerProbe.flags & RECORD_FLAG.DELETED) {
+			cursor += headerProbe.totalSize;
+			continue;
+		}
+
+		const payload = await readAt(cmp.fd, cursor, headerProbe.totalSize);
+		const rec = decodeRecord(payload, 0);
+		if (!rec) break;
+		if (rec.flags & RECORD_FLAG.DELETED) {
+			cursor += rec.totalSize;
+			continue;
+		}
+
+		try {
+			const obj = await cmp.options.format.decode(rec.data, config.collection);
+			const res = findObj(config, obj);
+			if (res) return res;
+		} catch (err) {
+			if (rec.flags & RECORD_FLAG.CRC) {
+				throw err;
+			}
+		}
+
+		cursor += rec.totalSize;
+	}
+
+	return null;
 }
 
 async function findAll(
