@@ -1,97 +1,81 @@
 import { FileHandle } from "fs/promises";
 import { _log } from "../log";
-import { Block, FileMeta } from "./head";
-import { INT_SIZE } from "./static";
 
-export function roundUpCapacity(result: FileMeta, size: number) {
-    return Math.ceil(size / result.blockSize) * result.blockSize;
+export async function writeData(
+	fd: FileHandle,
+	offset: number,
+	data: Buffer,
+	capacity: number,
+) {
+	if (!fd) throw new Error("File not open");
+	if (data.length > capacity) throw new Error("Data size exceeds capacity");
+
+	await _log(
+		6,
+		"Writing data at offset:",
+		offset,
+		"length:",
+		data.length,
+		"capacity:",
+		capacity,
+	);
+
+	await fd.write(data, 0, data.length, offset);
+	await _log(5, "Bytes written:", data.length);
+
+	if (data.length < capacity) {
+		const pad = Buffer.alloc(capacity - data.length, 0);
+		const padStart = offset + data.length;
+		await _log(6, "Padding with zeros:", pad.length, "at offset:", padStart);
+		await fd.write(pad, 0, pad.length, padStart);
+	}
+
+	await _log(6, "Data written");
 }
 
-export async function writeData(fd: FileHandle, offset: number, data: Buffer, capacity: number) {
-    if (!fd) throw new Error("File not open");
-    if (data.length > capacity) throw new Error("Data size exceeds capacity");
+export async function readData(
+	fd: FileHandle,
+	offset: number,
+	length: number,
+): Promise<Buffer> {
+	if (!fd) throw new Error("File not open");
+	if (length <= 0) return Buffer.alloc(0);
 
-    await _log(6, "Writing data at offset:", offset, "length:", data.length, "capacity:", capacity);
+	await _log(6, "Reading data from offset:", offset, "length:", length);
 
-    const { bytesWritten } = await fd.write(data, 0, data.length, offset);
-    await _log(5, "Bytes written:", bytesWritten);
+	const buf = Buffer.alloc(length);
+	const { bytesRead } = await fd.read(buf, 0, length, offset);
 
-    if (data.length < capacity) {
-        const pad = Buffer.alloc(capacity - data.length, 0);
-        const padStart = offset + data.length;
-        await _log(6, "Padding with zeros:", pad.length, "at offset:", padStart);
-        const { bytesWritten: padBytesWritten } = await fd.write(pad, 0, pad.length, padStart);
-        await _log(6, "Bytes written:", padBytesWritten);
-    }
+	await _log(5, "Bytes read:", bytesRead);
 
-    await _log(6, "Data written");
+	return buf;
 }
 
-export async function readData(fd: FileHandle, offset: number, length: number): Promise<Buffer> {
-    if (!fd) throw new Error("File not open");
-
-    await _log(6, "Reading data from offset:", offset, "length:", length);
-
-    const buf = Buffer.alloc(length);
-    const { bytesRead } = await fd.read(buf, 0, length, offset);
-
-    await _log(5, "Bytes read:", bytesRead);
-
-    return buf;
+export async function writeAt(fd: FileHandle, offset: number, data: Buffer) {
+	if (!fd) throw new Error("File not open");
+	await fd.write(data, 0, data.length, offset);
 }
 
-export function optimizeFreeList(blocks: Block[]): Block[] {
-    if (blocks.length <= 1) return blocks;
-
-    const sorted = [...blocks].sort((a, b) => a.offset - b.offset);
-
-    const merged: Block[] = [];
-    let current = sorted[0];
-
-    for (let i = 1; i < sorted.length; i++) {
-        const next = sorted[i];
-
-        if (current.offset + current.capacity === next.offset) {
-            current = {
-                offset: current.offset,
-                capacity: current.capacity + next.capacity
-            };
-        } else {
-            merged.push(current);
-            current = next;
-        }
-    }
-
-    merged.push(current);
-
-    return merged;
+export async function readAt(
+	fd: FileHandle,
+	offset: number,
+	length: number,
+): Promise<Buffer> {
+	if (!fd) throw new Error("File not open");
+	if (length <= 0) return Buffer.alloc(0);
+	const buf = Buffer.alloc(length);
+	await fd.read(buf, 0, length, offset);
+	return buf;
 }
 
-function checkCollection(start1: number, end1: number, start2: number, end2: number) {
-    _log(6, "Checking collection:", start1, end1, start2, end2);
-    return start1 < end2 && start2 < end1;
-}
-
-export function detectCollisions(result: FileMeta, start: number, size: number, skip: string[] = []) {
-    for (const { name, offset, capacity } of result.collections) {
-        if (skip.includes(name)) continue;
-        if (checkCollection(offset, offset + capacity, start, start + size))
-            return true;
-    }
-
-    return false;
-}
-
-export function pushToFreeList(result: FileMeta, offset: number, len: number) {
-    result.freeList.push({
-        offset,
-        capacity: roundUpCapacity(result, len),
-    });
-    result.freeList = optimizeFreeList(result.freeList);
-}
-
-export async function readCollectionEof(fd: FileHandle, offset: number) {
-    const buf = Buffer.alloc(INT_SIZE);
-    await fd.read(buf, 0, INT_SIZE, offset);
-    return buf.readUInt32LE(0);
+export async function readFd(
+	fd: FileHandle,
+	length: number,
+	pos: number,
+): Promise<Buffer> {
+	if (!fd) throw new Error("File not open");
+	if (length <= 0) return Buffer.alloc(0);
+	const buf = Buffer.alloc(length);
+	await fd.read(buf, 0, length, pos);
+	return buf;
 }

@@ -1,4 +1,4 @@
-# ValtheraDB Bin Plugin
+# ValtheraDB Bin Adapter
 
 > **Warning:** This adapter is experimental and NOT intended for production use. It may undergo frequent breaking changes.
 
@@ -7,65 +7,42 @@ The purpose of this experiment is to create a storage layer that allows Valthera
 ## Installation
 
 ```bash
-yarn add @wxn0brp/db-storage-bin
+bun add @wxn0brp/db-storage-bin
 ```
 
-## Usage
-
-### Initialization
-
-To get started, create a new `BinValthera` instance:
+## Quick start
 
 ```typescript
 import { createBinValthera } from "@wxn0brp/db-storage-bin";
 
-const { db, actions, mgr } = await createBinValthera("test.val", { preferredSize: 4096 });
-```
+const { db, mgr } = await createBinValthera("test.val", {
+    preferredSize: 4096,
+    growthFactor: 2,
+    defaultIndexed: false,
+    recordCrc: false,
+});
 
-This will create a new binary file named `test.val` (if it doesn't exist) and initialize the database.
+const users = db.c("user");
 
-### Basic
+await users.add({ name: "Alice", age: 30 });
+await users.add({ name: "Bob", age: 25 });
 
-The `db` object is an instance of `ValtheraClass` and supports the standard ValtheraDB methods.
+const all = await users.find();
+const alice = await users.findOne({ name: "Alice" });
 
-### Optimizing the Database
+await users.update({ name: "Alice" }, { age: 31 });
+await users.remove({ name: "Bob" });
 
-This will reclaim unused space in the binary file.
-
-```typescript
-await mgr.optimize();
-```
-
-### Closing
-
-```typescript
 await db.close();
 ```
 
-## API
-
-### `createBinValthera(path, opts, init)`
-
--   `path`: The path to the binary file.
--   `opts`: Options for the `BinManager`.
--   `init`: Whether to initialize the database upon creation (default: `true`).
-
-Returns an object containing:
--   `db`: An instance of `ValtheraClass`.
--   `actions`: An instance of `BinFileAction`.
--   `mgr`: An instance of `BinManager`.
-
-### `BinManager(path, options)`
-
--   `path`: The path to the binary file.
--   `options`:
-    -   `preferredSize`: The preferred block size for the database (default: `256`).
-
 ## Documentation
 
-- [Data Structure](https://github.com/wxn0brP/ValtheraDB-storage-bin/blob/master/docs/data-structure.md)
+- [Options](./docs/options.md) - full option reference
+- [Data Structure](./docs/data-structure.md) - on-disk format reference
+- [Troubleshooting](./docs/troubleshooting.md) - common errors and fixes
 - [ValtheraDB-Core](https://github.com/wxn0brP/ValtheraDB-core)
 
 ## License
 
-This project is licensed under the MIT License.
+MIT

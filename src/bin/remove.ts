@@ -1,42 +1,79 @@
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { matchObj } from "@wxn0brp/db-core/utils/process";
-import { BinManager } from ".";
-import { _log } from "../log";
-import { findCollection } from "./data";
-import { INT_SIZE } from "./static";
-import { readCollectionEof, readData, writeData } from "./utils";
+import { BinManager } from "./index";
+import { flushMeta } from "./meta";
+import { compactCollection } from "./optimize";
+import { decodeRecord, RECORD_FLAG } from "./record";
+import { COLLECTION_HEADER_SIZE, COMPACTION_DEAD_RATIO } from "./static";
 
-export async function remove(cmp: BinManager, config: VQueryT.Remove, one: boolean): Promise<DataInternal[]> {
-    await _log(2, "Removing from collection:", config.collection);
+export async function remove(
+	cmp: BinManager,
+	config: VQueryT.Remove,
+	one: boolean,
+): Promise<DataInternal[]> {
+	if (!cmp.fd) throw new Error("File not open");
 
-    const collection = findCollection(cmp, config.collection);
+	const collection = cmp.meta.collectionByName.get(config.collection);
+	if (!collection) return [];
 
-    let cursor = collection.offset + INT_SIZE;
-    const collectionEOF = await readCollectionEof(cmp.fd, collection.offset);
-    if (collectionEOF === 0) return [];
+	const removed: DataInternal[] = [];
 
-    const removed: DataInternal[] = [];
-    const endOffset = collection.offset + INT_SIZE + collectionEOF;
-    while (cursor < endOffset) {
-        const dataLength = (await readData(cmp.fd, cursor, INT_SIZE)).readUInt32LE(0);
-        cursor += INT_SIZE;
-        const dataOffset = cursor;
+	if (collection.header.used <= COLLECTION_HEADER_SIZE) return removed;
 
-        const data = await readData(cmp.fd, cursor, dataLength);
-        cursor += dataLength;
+	const dataLen = collection.header.used - COLLECTION_HEADER_SIZE;
+	const buf = Buffer.alloc(dataLen);
+	await cmp.fd.read(
+		buf,
+		0,
+		dataLen,
+		collection.headerOffset + COLLECTION_HEADER_SIZE,
+	);
 
-        // if removed
-        if (new Uint8Array(data).every(byte => byte === 0)) continue;
+	const cache = cmp.getRecordCache(collection.name);
+	let cursor = 0;
+	while (cursor < buf.length) {
+		const rec = decodeRecord(buf, cursor);
+		if (!rec) break;
 
-        const obj = await cmp.options.format.decode(data, config.collection);
-        if (!matchObj(config, obj)) continue;
+		if (rec.flags & RECORD_FLAG.DELETED) {
+			cursor += rec.totalSize;
+			continue;
+		}
 
-        await writeData(cmp.fd, dataOffset, Buffer.alloc(dataLength).fill(0), dataLength);
-        removed.push(obj);
+		const recordOffset =
+			collection.headerOffset + COLLECTION_HEADER_SIZE + cursor;
+		const obj = await cmp.options.format.decode(rec.data, config.collection);
+		const match = matchObj(config, obj);
 
-        if (one) break;
-    }
+		if (match) {
+			const flagByte = Buffer.alloc(1);
+			flagByte[0] = rec.flags | RECORD_FLAG.DELETED;
+			await cmp.writeAt(recordOffset, flagByte);
 
-    return removed;
+			collection.header.deadCount += 1;
+			if (cache) cache.delete(recordOffset);
+
+			removed.push(obj);
+
+			if (one) break;
+		}
+
+		cursor += rec.totalSize;
+	}
+
+	if (removed.length === 0) return removed;
+
+	cmp.markCollectionDirty(collection.name);
+
+	if (
+		collection.header.recordCount > 0 &&
+		collection.header.deadCount / collection.header.recordCount >
+			COMPACTION_DEAD_RATIO
+	) {
+		await compactCollection(cmp, collection);
+	}
+
+	await flushMeta(cmp);
+	return removed;
 }

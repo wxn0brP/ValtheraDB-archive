@@ -1,67 +1,171 @@
 import { DataInternal } from "@wxn0brp/db-core/types/data";
-import { BinManager } from ".";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { _log } from "../log";
-import { findCollection } from "./data";
-import { INT_SIZE } from "./static";
-import { readCollectionEof, readData } from "./utils";
 import { findObj } from "@wxn0brp/db-core/utils/process";
+import { BinManager } from "./index";
+import { decodeRecord, RECORD_FLAG } from "./record";
+import { COLLECTION_FLAG } from "./static";
+import { COLLECTION_HEADER_SIZE } from "./static";
+import { lookup as indexLookup } from "./idindex";
+import { readAt, readData } from "./utils";
 
-export async function findOne(cmp: BinManager, config: VQueryT.FindOne): Promise<DataInternal | null> {
-    await _log(2, "Find one in collection:", config.collection);
+const READ_HEADER_MAX = 6;
 
-    const collection = findCollection(cmp, config.collection);
+export async function find(
+	cmp: BinManager,
+	config: VQueryT.Find,
+): Promise<DataInternal[]> {
+	if (!cmp.fd) throw new Error("File not open");
 
-    let cursor = collection.offset + INT_SIZE;
-    const collectionEOF = (await readData(cmp.fd, collection.offset, INT_SIZE)).readUInt32LE(0);
-    if (collectionEOF === 0) return null;
+	const collection = cmp.meta.collectionByName.get(config.collection);
+	if (!collection) return [];
 
-    const endOffset = collection.offset + INT_SIZE + collectionEOF;
-    while (cursor < endOffset) {
-        const dataLength = (await readData(cmp.fd, cursor, INT_SIZE)).readUInt32LE(0);
-        cursor += INT_SIZE;
+	if (
+		(collection.header.flags & COLLECTION_FLAG.INDEXED) !== 0 &&
+		isIdOnlySearch(config)
+	) {
+		return await findByIdScan(cmp, collection, config);
+	}
 
-        const data = await readData(cmp.fd, cursor, dataLength);
-        cursor += dataLength;
-
-        // if removed
-        if (new Uint8Array(data).every(byte => byte === 0)) continue;
-
-        const obj = await cmp.options.format.decode(data, config.collection);
-
-        const res = findObj(config, obj);
-        if (res) return res;
-    }
-
-    return null;
+	return await findAll(cmp, collection, config);
 }
 
-export async function find(cmp: BinManager, config: VQueryT.Find): Promise<DataInternal[]> {
-    await _log(2, "Find in collection:", config.collection);
+export async function findOne(
+	cmp: BinManager,
+	config: VQueryT.FindOne,
+): Promise<DataInternal | null> {
+	if (!cmp.fd) throw new Error("File not open");
 
-    const collection = findCollection(cmp, config.collection);
+	const collection = cmp.meta.collectionByName.get(config.collection);
+	if (!collection) return null;
 
-    let cursor = collection.offset + INT_SIZE;
-    const collectionEOF = await readCollectionEof(cmp.fd, collection.offset);
-    if (collectionEOF === 0) return [];
+	if (
+		(collection.header.flags & COLLECTION_FLAG.INDEXED) !== 0 &&
+		isIdOnlySearch(config)
+	) {
+		const id = String((config.search as any)._id);
+		const index = await cmp.getOrLoadIndex(collection.name);
+		if (!index) return null;
+		const offset = indexLookup(index, id);
+		if (offset === null) return null;
 
-    const res: DataInternal[] = [];
-    const endOffset = collection.offset + INT_SIZE + collectionEOF;
-    while (cursor < endOffset) {
-        const dataLength = (await readData(cmp.fd, cursor, INT_SIZE)).readUInt32LE(0);
-        cursor += INT_SIZE;
+		const data = await readRecordPayload(cmp, collection, offset);
+		if (!data) return null;
+		const obj = await cmp.options.format.decode(data, config.collection);
+		return findObj(config, obj);
+	}
 
-        const data = await readData(cmp.fd, cursor, dataLength);
-        cursor += dataLength;
+	const items = await findAll(cmp, collection, config);
+	return items.length ? items[0] : null;
+}
 
-        // if removed
-        if (new Uint8Array(data).every(byte => byte === 0)) continue;
+async function findAll(
+	cmp: BinManager,
+	collection: any,
+	config: VQueryT.Find,
+): Promise<DataInternal[]> {
+	if (collection.header.used <= COLLECTION_HEADER_SIZE) return [];
 
-        const obj = await cmp.options.format.decode(data, config.collection);
+	const dataLen = collection.header.used - COLLECTION_HEADER_SIZE;
+	const buf = Buffer.alloc(dataLen);
+	await readData(
+		cmp.fd,
+		collection.headerOffset + COLLECTION_HEADER_SIZE,
+		dataLen,
+	).then(b => b.copy(buf));
 
-        const match = findObj(config, obj);
-        if (match) res.push(match);
-    }
+	const results: DataInternal[] = [];
+	let cursor = 0;
+	while (cursor < buf.length) {
+		const rec = decodeRecord(buf, cursor);
+		if (!rec) break;
+		if (!(rec.flags & RECORD_FLAG.DELETED)) {
+			try {
+				const obj = await cmp.options.format.decode(
+					rec.data,
+					config.collection,
+				);
+				const res = findObj(config, obj);
+				if (res) results.push(res);
+			} catch (err) {
+				if (rec.flags & RECORD_FLAG.CRC) {
+					throw err;
+				}
+			}
+		}
+		cursor += rec.totalSize;
+	}
+	return results;
+}
 
-    return res;
+async function findByIdScan(
+	cmp: BinManager,
+	collection: any,
+	config: VQueryT.Find,
+): Promise<DataInternal[]> {
+	const index = await cmp.getOrLoadIndex(collection.name);
+	if (!index || index.base.length + index.delta.length === 0) return [];
+	const search = (config.search || {}) as Record<string, any>;
+	const wantId = search._id !== undefined ? String(search._id) : null;
+
+	const targets: number[] = [];
+	const all = [
+		...index.base,
+		...index.delta,
+	];
+	for (const entry of all) {
+		if (wantId !== null && entry.id !== wantId) continue;
+		targets.push(entry.offset);
+	}
+
+	if (targets.length === 0) return [];
+
+	const payloads = await Promise.all(
+		targets.map(o => readRecordPayload(cmp, collection, o)),
+	);
+
+	const results: DataInternal[] = [];
+	for (const data of payloads) {
+		if (!data) continue;
+		const obj = await cmp.options.format.decode(data, config.collection);
+		const res = findObj(config, obj);
+		if (res) results.push(res);
+	}
+	return results;
+}
+
+async function readRecordPayload(
+	cmp: BinManager,
+	collection: any,
+	recordOffset: number,
+): Promise<Buffer | null> {
+	const cache = cmp.getRecordCache(collection.name);
+	if (cache && cache.has(recordOffset)) {
+		return cache.get(recordOffset)!;
+	}
+
+	if (
+		recordOffset < collection.headerOffset ||
+		recordOffset >= collection.headerOffset + collection.header.used
+	)
+		return null;
+
+	const headerBuf = await readAt(cmp.fd, recordOffset, READ_HEADER_MAX);
+	if (headerBuf.length === 0) return null;
+
+	const headerProbe = decodeRecord(headerBuf, 0);
+	if (!headerProbe) return null;
+	if (headerProbe.flags & RECORD_FLAG.DELETED) return null;
+
+	const payload = await readAt(cmp.fd, recordOffset, headerProbe.totalSize);
+	const rec = decodeRecord(payload, 0);
+	if (!rec) return null;
+	if (rec.flags & RECORD_FLAG.DELETED) return null;
+	if (cache) cache.set(recordOffset, rec.data);
+	return rec.data;
+}
+
+function isIdOnlySearch(config: { search?: any }) {
+	if (!config.search || typeof config.search !== "object") return false;
+	const keys = Object.keys(config.search);
+	return keys.length > 0 && keys.every(k => k === "_id" || k === "idKey");
 }

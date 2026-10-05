@@ -1,92 +1,70 @@
-import { BinManager, CollectionMeta } from ".";
-import { _log } from "../log";
-import { findCollection, getFreeSlot } from "./data";
-import { saveHeaderAndPayload } from "./head";
-import { INT_SIZE } from "./static";
-import { readCollectionEof, readData, roundUpCapacity, writeData } from "./utils";
+import { COLLECTION_FLAG, COLLECTION_HEADER_SIZE } from "./static";
+import { flushMeta, newCollectionHeader } from "./meta";
+import { roundUp } from "./space";
+import { BinManager } from "./index";
+import { encodeCollectionHeader } from "./collection-header";
 
-export async function ensureCollection(cmp: BinManager, name: string, length: number, append: boolean) {
-    let lengthToStore: number;
+export async function ensureCollection(
+	cmp: BinManager,
+	name: string,
+	minSize: number = COLLECTION_HEADER_SIZE,
+) {
+	if (!cmp.fd) throw new Error("File not open");
+	if (cmp.meta.collectionByName.has(name)) return;
 
-    const existingCollection = findCollection(cmp, name);
-    const isLastCollection = existingCollection && cmp.meta.collections[cmp.meta.collections.length - 1].offset === existingCollection.offset;
-    if (existingCollection) {
-        if (append) {
-            const collectionEOF = await readCollectionEof(cmp.fd, existingCollection.offset);
-            lengthToStore = roundUpCapacity(cmp.meta, INT_SIZE + collectionEOF + INT_SIZE + length);
-            await _log(6, "Append mode, calculated lengthToStore:", lengthToStore);
-        } else {
-            lengthToStore = roundUpCapacity(cmp.meta, length + INT_SIZE);
-        }
+	const capacity = roundUp(
+		Math.max(minSize, COLLECTION_HEADER_SIZE + cmp.options.preferredSize),
+		cmp.meta.header.blockSize,
+	);
+	const slot = cmp.allocSpace(capacity);
+	const header = newCollectionHeader(
+		capacity,
+		cmp.options.defaultIndexed ? COLLECTION_FLAG.INDEXED : 0,
+	);
 
-        await _log(6, "Existing collection found:", existingCollection.name, "capacity:", existingCollection.capacity, "needed:", lengthToStore);
+	const record = {
+		name,
+		headerOffset: slot.offset,
+		header,
+	};
+	cmp.meta.collections.push(record);
+	cmp.meta.collectionByName.set(name, record);
+	cmp.collectionsDirty = true;
 
-        if (existingCollection.capacity >= lengthToStore) {
-            await _log(5, "Existing collection has enough capacity, reusing");
-            return existingCollection;
-        }
+	const headerBuf = encodeCollectionHeader(header);
+	await cmp.writeAt(slot.offset, headerBuf);
 
-        await _log(5, "Existing collection too small, moving to free list and creating new");
-        cmp.meta.collections = cmp.meta.collections.filter(c => c.name !== name);
-    } else {
-        lengthToStore = roundUpCapacity(cmp.meta, length + INT_SIZE);
-        await _log(6, "No existing collection found, calculated lengthToStore:", lengthToStore);
-    }
+	await flushMeta(cmp);
+}
 
-    let newCollection: CollectionMeta;
+export async function removeCollection(cmp: BinManager, name: string) {
+	if (!cmp.fd) throw new Error("File not open");
 
-    // if exists and is last collection -> reuse offset
-    if (existingCollection && isLastCollection) {
-        newCollection = { name, offset: existingCollection.offset, capacity: lengthToStore };
-        cmp.meta.fileSize += lengthToStore - existingCollection.capacity;
-    } else {
-        const slot = await getFreeSlot(cmp, lengthToStore);
-        if (slot) {
-            await _log(6, "Using free slot at offset:", slot.offset, "capacity:", slot.capacity);
-            newCollection = { name, offset: slot.offset, capacity: slot.capacity };
+	const collection = cmp.meta.collectionByName.get(name);
+	if (!collection) throw new Error(`collection ${name} not found`);
 
-        } else {
-            await _log(6, "No free slot, appending at offset:", cmp.meta.fileSize);
-            newCollection = { name, offset: cmp.meta.fileSize, capacity: lengthToStore };
-            cmp.meta.fileSize += lengthToStore;
-        }
-    }
+	if (cmp.options.overwriteRemovedCollection) {
+		const zeros = Buffer.alloc(collection.header.capacity, 0);
+		await cmp.writeAt(collection.headerOffset, zeros);
+	}
 
-    cmp.meta.collections.push(newCollection);
+	cmp.meta.collections = cmp.meta.collections.filter(c => c.name !== name);
+	cmp.meta.collectionByName.delete(name);
+	cmp.invalidateRecordCache(name);
+	cmp.invalidateIndexCache(name);
+	cmp.collectionsDirty = true;
 
-    if (existingCollection) {
-        if (!isLastCollection) {
-            const chunkSize = 2048;
-            const tmpBuffer = Buffer.alloc(chunkSize);
-            const collectionLength = (await readData(cmp.fd, existingCollection.offset, INT_SIZE)).readUInt32LE(0);
-            const loopCount = Math.floor((collectionLength + INT_SIZE) / chunkSize);
-            await _log(3, "Copying", collectionLength, "bytes from old offset", existingCollection.offset, "to new offset", newCollection.offset);
+	cmp.freeSpace(collection.headerOffset, collection.header.capacity);
 
-            for (let i = 0; i < loopCount; i++) {
-                const readDataOffset = existingCollection.offset + i * chunkSize;
-                const writeDataOffset = newCollection.offset + i * chunkSize;
+	if (collection.header.indexOffset > 0 && collection.header.indexLen > 0) {
+		const aligned =
+			Math.ceil(collection.header.indexLen / cmp.meta.header.blockSize) *
+			cmp.meta.header.blockSize;
+		cmp.freeSpace(
+			collection.headerOffset + collection.header.indexOffset,
+			aligned,
+		);
+	}
 
-                await cmp.fd.read(tmpBuffer, 0, chunkSize, readDataOffset);
-                await cmp.fd.write(tmpBuffer, 0, chunkSize, writeDataOffset);
-            }
-
-            const lastChunkSize = (collectionLength + INT_SIZE) % chunkSize;
-            if (lastChunkSize) {
-                const readDataOffset = existingCollection.offset + loopCount * chunkSize;
-                const writeDataOffset = newCollection.offset + loopCount * chunkSize;
-                await cmp.fd.read(tmpBuffer, 0, lastChunkSize, readDataOffset);
-                await cmp.fd.write(tmpBuffer, 0, lastChunkSize, writeDataOffset);
-            }
-            cmp.meta.freeList.push(existingCollection);
-        }
-    } else {
-        // Write 0 length for new collection
-        const collectionLengthBuffer = Buffer.alloc(INT_SIZE);
-        collectionLengthBuffer.writeUInt32LE(0, 0);
-        await writeData(cmp.fd, newCollection.offset, collectionLengthBuffer, INT_SIZE);
-    }
-
-    await saveHeaderAndPayload(cmp);
-    await _log(5, "Collection ensured:", newCollection);
-    return newCollection;
+	await flushMeta(cmp);
 }

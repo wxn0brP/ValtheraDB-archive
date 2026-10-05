@@ -1,92 +1,117 @@
-import { rename, rm } from "fs/promises";
-import { BinManager } from ".";
-import { ensureCollection } from "./collection";
-import { saveHeaderAndPayload } from "./head";
-import { INT_SIZE } from "./static";
-import { readCollectionEof, readData, writeData } from "./utils";
-import { _log } from "../log";
-
-function isRemovedRecord(data: Buffer) {
-    return new Uint8Array(data).every(byte => byte === 0);
-}
-
-async function appendRawRecord(target: BinManager, collectionName: string, recordLengthBuffer: Buffer, data: Buffer) {
-    const collection = await ensureCollection(target, collectionName, data.length, true);
-    const collectionEOF = await readCollectionEof(target.fd, collection.offset);
-    const offset = collection.offset + collectionEOF + INT_SIZE;
-
-    await writeData(target.fd, offset, recordLengthBuffer, INT_SIZE);
-    await writeData(target.fd, offset + INT_SIZE, data, data.length);
-
-    const newEOF = collectionEOF + INT_SIZE + data.length;
-    const collectionLengthBuffer = Buffer.alloc(INT_SIZE);
-    collectionLengthBuffer.writeUInt32LE(newEOF, 0);
-    await writeData(target.fd, collection.offset, collectionLengthBuffer, INT_SIZE);
-}
-
-async function copyLiveRecords(source: BinManager, target: BinManager, collectionName: string, sourceOffset: number, collectionEOF: number) {
-    let readCursor = sourceOffset + INT_SIZE;
-    const endOffset = readCursor + collectionEOF;
-
-    while (readCursor < endOffset) {
-        const recordLengthBuffer = await readData(source.fd, readCursor, INT_SIZE);
-        const recordLength = recordLengthBuffer.readUInt32LE(0);
-        readCursor += INT_SIZE;
-
-        const data = await readData(source.fd, readCursor, recordLength);
-        readCursor += recordLength;
-
-        if (isRemovedRecord(data)) continue;
-
-        await appendRawRecord(target, collectionName, recordLengthBuffer, data);
-    }
-}
+import { BinManager } from "./index";
+import { decodeRecord, encodeRecord, RECORD_FLAG } from "./record";
+import { flushMeta } from "./meta";
+import { COLLECTION_HEADER_SIZE } from "./static";
 
 export async function optimize(cmp: BinManager) {
-    await _log(3, "Starting database optimization");
-    const collections = [...cmp.meta.collections];
+	if (!cmp.fd) throw new Error("File not open");
+	const collections = [
+		...cmp.meta.collections,
+	];
+	for (const c of collections) {
+		if (c.header.deadCount > 0) {
+			await compactCollection(cmp, c);
+		}
+	}
+	for (const c of collections) {
+		cmp.invalidateRecordCache(c.name);
+	}
+	const stats = await cmp.fd.stat();
+	if (stats.size > cmp.meta.header.fileSize) {
+		await cmp.fd.truncate(cmp.meta.header.fileSize);
+	}
+	await flushMeta(cmp);
+}
 
-    const tmpPath = `${cmp.path}.tmp`;
-    await _log(6, "Removing stale optimization temp file:", tmpPath);
-    await rm(tmpPath, { force: true });
+export async function compactCollection(cmp: BinManager, collection: any) {
+	if (!cmp.fd) throw new Error("File not open");
+	if (collection.header.used <= COLLECTION_HEADER_SIZE) {
+		collection.header.deadCount = 0;
+		return;
+	}
 
-    const tmpMgr = new BinManager(tmpPath, cmp.options);
-    let tmpOpened = false;
-    let originalClosed = false;
+	const dataLen = collection.header.used - COLLECTION_HEADER_SIZE;
+	const buf = Buffer.alloc(dataLen);
+	await cmp.fd.read(
+		buf,
+		0,
+		dataLen,
+		collection.headerOffset + COLLECTION_HEADER_SIZE,
+	);
 
-    try {
-        await tmpMgr.init();
-        tmpOpened = true;
+	const liveRecords: {
+		data: Buffer;
+		useCrc: boolean;
+	}[] = [];
+	let cursor = 0;
+	while (cursor < buf.length) {
+		const rec = decodeRecord(buf, cursor);
+		if (!rec) break;
+		if (!(rec.flags & RECORD_FLAG.DELETED)) {
+			liveRecords.push({
+				data: rec.data,
+				useCrc: (rec.flags & RECORD_FLAG.CRC) !== 0,
+			});
+		}
+		cursor += rec.totalSize;
+	}
 
-        const lengthBuffer = Buffer.alloc(INT_SIZE);
-        for (const { name, offset } of collections) {
-            await _log(6, "Optimizing collection:", name);
-            const collectionEOF = await readCollectionEof(cmp.fd, offset);
+	const liveBytes = liveRecords.reduce(
+		(sum, r) =>
+			sum +
+			encodeRecord(r.data, {
+				crc: r.useCrc,
+			}).length,
+		0,
+	);
+	const newCapacity = Math.max(
+		Math.ceil(
+			(COLLECTION_HEADER_SIZE + liveBytes + cmp.options.preferredSize) /
+				cmp.meta.header.blockSize,
+		) * cmp.meta.header.blockSize,
+		COLLECTION_HEADER_SIZE + cmp.options.preferredSize,
+	);
 
-            const collectionMeta = await ensureCollection(tmpMgr, name, 0, false);
-            lengthBuffer.writeUInt32LE(0, 0);
-            await writeData(tmpMgr.fd, collectionMeta.offset, lengthBuffer, INT_SIZE);
-            await copyLiveRecords(cmp, tmpMgr, name, offset, collectionEOF);
-        }
+	const slot = cmp.allocSpace(newCapacity);
 
-        await saveHeaderAndPayload(tmpMgr);
-        await tmpMgr.close();
-        tmpOpened = false;
+	const newHeaderBuf = Buffer.alloc(COLLECTION_HEADER_SIZE, 0);
+	newHeaderBuf.writeUInt32LE(liveRecords.length, 0);
+	newHeaderBuf.writeUInt32LE(0, 4);
+	newHeaderBuf.writeUInt32LE(newCapacity, 8);
+	newHeaderBuf.writeUInt32LE(COLLECTION_HEADER_SIZE, 12);
+	newHeaderBuf.writeUInt32LE(COLLECTION_HEADER_SIZE, 16);
+	newHeaderBuf.writeUInt8(collection.header.flags, 28);
+	newHeaderBuf.writeBigUInt64LE(BigInt(Date.now()), 29);
+	await cmp.writeAt(slot.offset, newHeaderBuf);
 
-        await _log(5, "Closing original file for optimization");
-        await cmp.close();
-        originalClosed = true;
+	let off = COLLECTION_HEADER_SIZE;
+	for (const r of liveRecords) {
+		const rec = encodeRecord(r.data, {
+			crc: r.useCrc,
+		});
+		await cmp.writeAt(slot.offset + off, rec);
+		off += rec.length;
+	}
 
-        await _log(5, "Replacing original database with optimized temp file");
-        await rename(tmpPath, cmp.path);
-        await cmp.init();
-        originalClosed = false;
-    } catch (err) {
-        if (tmpOpened) await tmpMgr.close();
-        await rm(tmpPath, { force: true });
-        if (originalClosed) await cmp.init();
-        throw err;
-    }
+	const oldOffset = collection.headerOffset;
+	const oldCapacity = collection.header.capacity;
+	collection.headerOffset = slot.offset;
+	collection.header.capacity = newCapacity;
+	collection.header.used = off;
+	collection.header.freeOffset = off;
+	collection.header.recordCount = liveRecords.length;
+	collection.header.deadCount = 0;
+	collection.header.lastCompactionTs = Date.now();
+	collection.header.indexOffset = 0;
+	collection.header.indexLen = 0;
 
-    await _log(3, "Database optimization complete");
+	const tail = oldOffset + oldCapacity;
+	if (tail === cmp.meta.header.fileSize) {
+		cmp.meta.header.fileSize -= oldCapacity;
+	} else {
+		cmp.freeSpace(oldOffset, oldCapacity);
+	}
+
+	cmp.invalidateRecordCache(collection.name);
+	cmp.invalidateIndexCache(collection.name);
 }
