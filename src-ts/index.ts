@@ -97,7 +97,7 @@ export class NativeActions extends FileActions {
         super(folder, options, fileCpu);
     }
 
-    version = "0.120.1-native";
+    version = "0.120.2-native";
 
     _canUseNative(query: VQueryT.Find | VQueryT.FindOne | VQueryT.Remove) {
         const format = this.options.format;
