@@ -1,9 +1,2 @@
-export const files = ["dist", "package.json", "LICENSE"];
-export const branch = "dist";
-export const preBuildCommands = "";
-export const postBuildCommands = "";
-export const scriptsHandling = "remove-all";
-export const customScripts = [];
-export const publishToNpm = true;
-export const createVersionedBranch = true;
-export const typeDocs = 1; // 0 off, 1 if publishToNpm, 2 always
+export const publishToNpm = false;
+export const typeDocs = 2;
