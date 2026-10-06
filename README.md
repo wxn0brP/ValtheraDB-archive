@@ -14,8 +14,8 @@ bun add @wxn0brp/db-storage-rocks
 import { ValtheraClass } from "@wxn0brp/db-core";
 import { RocksValthera } from "@wxn0brp/db-storage-rocks";
 
-const actions = new RocksValthera("./data.rocks");
-const db = new ValtheraClass({ dbAction: actions });
+const adapter = new RocksValthera("./data.rocks");
+const db = new ValtheraClass({ adapter });
 
 try {
     const users = db.c("users");
