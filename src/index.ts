@@ -25,12 +25,14 @@ import {
 } from "./storage";
 import { RocksBatchOp, RocksDb, RocksEntry, RocksOpenOptions } from "./types";
 import { randomKey, valueToString } from "./utils";
+import { version } from "./version";
 
 export * from "./types";
 
 export class RocksValthera extends ActionsBase {
 	_inited = false;
 	db: RocksDb;
+	version = version;
 
 	constructor(
 		public location: string,
