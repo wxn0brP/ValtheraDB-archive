@@ -66,17 +66,15 @@ static char *find_on_file(const char *file, FindContext *ctx)
     if (!f)
         return NULL;
 
-    char *line = NULL;
-    size_t cap = 0;
-    ssize_t read;
+    LineReader lr;
+    lr_init(&lr, f);
+
+    size_t line_len;
+    const char *line;
     char *match = NULL;
 
-    while ((read = getline(&line, &cap, f)) != -1)
+    while ((line = lr_next(&lr, &line_len)) != NULL)
     {
-        size_t line_len = (size_t)read;
-        while (line_len > 0 && (line[line_len - 1] == '\n' || line[line_len - 1] == '\r'))
-            line[--line_len] = '\0';
-
         if (line_len == 0)
             continue;
 
@@ -108,7 +106,6 @@ static char *find_on_file(const char *file, FindContext *ctx)
             break;
     }
 
-    free(line);
     fclose(f);
     return match;
 }
@@ -151,7 +148,7 @@ static char *find_internal(const char *dir, const char *fields_json, bool findOn
 
     FindContext ctx = make_find_context(fields, findOne, offset, limit);
 
-    if (!findOne && (!buf_init(&ctx.state.out) || !buf_append(&ctx.state.out, "[")))
+    if (!findOne && (!buf_init_prealloc(&ctx.state.out, 1024 * 1024) || !buf_append(&ctx.state.out, "[")))
         ctx.state.ok = false;
 
     char *result = NULL;

@@ -18,6 +18,148 @@ bool buf_init(Buffer *b)
     return true;
 }
 
+bool buf_init_prealloc(Buffer *b, size_t initial_cap)
+{
+    if (initial_cap < 1024)
+        initial_cap = 1024;
+    b->cap = initial_cap;
+    b->len = 0;
+    b->data = (char *)malloc(b->cap);
+    if (!b->data)
+        return false;
+
+    b->data[0] = '\0';
+    return true;
+}
+
+bool wb_init(WriteBuffer *wb, FILE *f)
+{
+    wb->pos = 0;
+    wb->file = f;
+    return true;
+}
+
+bool wb_flush(WriteBuffer *wb)
+{
+    if (wb->pos > 0)
+    {
+        if (fwrite(wb->data, 1, wb->pos, wb->file) != wb->pos)
+            return false;
+        wb->pos = 0;
+    }
+    return true;
+}
+
+bool wb_write(WriteBuffer *wb, const char *data, size_t len)
+{
+    if (wb->pos + len >= sizeof(wb->data))
+    {
+        if (!wb_flush(wb))
+            return false;
+        if (len >= sizeof(wb->data))
+            return fwrite(data, 1, len, wb->file) == len;
+    }
+    memcpy(wb->data + wb->pos, data, len);
+    wb->pos += len;
+    return true;
+}
+
+bool wb_writeln(WriteBuffer *wb, const char *data, size_t len)
+{
+    if (wb->pos + len + 1 >= sizeof(wb->data))
+    {
+        if (!wb_flush(wb))
+            return false;
+        if (len + 1 >= sizeof(wb->data))
+        {
+            if (fwrite(data, 1, len, wb->file) != len)
+                return false;
+            return fputc('\n', wb->file) != EOF;
+        }
+    }
+    memcpy(wb->data + wb->pos, data, len);
+    wb->pos += len;
+    wb->data[wb->pos++] = '\n';
+    return true;
+}
+
+bool lr_init(LineReader *lr, FILE *f)
+{
+    lr->read_pos = 0;
+    lr->read_len = 0;
+    lr->eof = false;
+    lr->file = f;
+    return true;
+}
+
+const char *lr_next(LineReader *lr, size_t *out_len)
+{
+    static char line_buf[1048576];
+    size_t line_pos = 0;
+
+    while (1)
+    {
+        if (lr->read_pos < lr->read_len)
+        {
+            char *start = lr->read_buf + lr->read_pos;
+            char *nl = memchr(start, '\n', lr->read_len - lr->read_pos);
+
+            if (nl)
+            {
+                size_t seg = nl - start;
+                if (line_pos + seg >= sizeof(line_buf))
+                {
+                    lr->read_pos += seg + 1;
+                    *out_len = line_pos + seg;
+                    return line_buf;
+                }
+                memcpy(line_buf + line_pos, start, seg);
+                line_pos += seg;
+                lr->read_pos += seg + 1;
+
+                while (line_pos > 0 && (line_buf[line_pos - 1] == '\r' || line_buf[line_pos - 1] == ' ' || line_buf[line_pos - 1] == '\t'))
+                    line_pos--;
+
+                *out_len = line_pos;
+                return line_buf;
+            }
+            else
+            {
+                size_t seg = lr->read_len - lr->read_pos;
+                if (line_pos + seg >= sizeof(line_buf))
+                {
+                    *out_len = line_pos + seg;
+                    lr->read_pos = lr->read_len;
+                    return line_buf;
+                }
+                memcpy(line_buf + line_pos, start, seg);
+                line_pos += seg;
+                lr->read_pos = lr->read_len;
+            }
+        }
+
+        if (lr->eof)
+        {
+            if (line_pos > 0)
+            {
+                *out_len = line_pos;
+                lr->eof = false;
+                return line_buf;
+            }
+            return NULL;
+        }
+
+        size_t n = fread(lr->read_buf, 1, sizeof(lr->read_buf), lr->file);
+        lr->read_pos = 0;
+        lr->read_len = n;
+        if (n == 0)
+        {
+            lr->eof = true;
+            continue;
+        }
+    }
+}
+
 static bool buf_reserve(Buffer *b, size_t needed)
 {
     if (needed <= b->cap)

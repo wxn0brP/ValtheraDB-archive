@@ -38,29 +38,30 @@ static bool append_removed(RemoveContext *ctx, const char *line, size_t line_len
     return buf_append_len(&ctx->state.removed, line, line_len);
 }
 
-static bool write_line(FILE *f, const char *line, size_t line_len)
+static bool might_contain_keys(const char *line, json_t *fields)
 {
-    return fwrite(line, 1, line_len, f) == line_len && fputc('\n', f) != EOF;
-}
-
-static void trim_line(char **line, size_t *line_len)
-{
-    while (*line_len > 0 && ((*line)[*line_len - 1] == '\n' || (*line)[*line_len - 1] == '\r'))
-        (*line)[--(*line_len)] = '\0';
-
-    while (**line == ' ' || **line == '\t')
+    const char *key;
+    json_t *value;
+    
+    json_object_foreach(fields, key, value)
     {
-        (*line)++;
-        (*line_len)--;
+        char search_key[512];
+        int len = snprintf(search_key, sizeof(search_key), "\"%s\"", key);
+        if (len < 0 || len >= (int)sizeof(search_key))
+            return false;
+        if (!strstr(line, search_key))
+            return false;
     }
-
-    while (*line_len > 0 && ((*line)[*line_len - 1] == ' ' || (*line)[*line_len - 1] == '\t'))
-        (*line)[--(*line_len)] = '\0';
+    
+    return true;
 }
 
 static bool should_remove_line(RemoveContext *ctx, const char *line)
 {
     if (ctx->opts.one && ctx->state.already_removed_one)
+        return false;
+
+    if (!might_contain_keys(line, ctx->opts.fields))
         return false;
 
     json_t *json = json_loads(line, 0, &ctx->error);
@@ -93,23 +94,24 @@ static bool remove_on_file(const char *file, RemoveContext *ctx)
         return false;
     }
 
-    char *line = NULL;
-    size_t cap = 0;
-    ssize_t read;
+    LineReader lr;
+    lr_init(&lr, in);
+
+    WriteBuffer wb;
+    wb_init(&wb, out);
+
+    size_t line_len;
+    const char *line;
     bool ok = true;
 
-    while ((read = getline(&line, &cap, in)) != -1)
+    while ((line = lr_next(&lr, &line_len)) != NULL)
     {
-        size_t line_len = (size_t)read;
-        char *trimmed = line;
-        trim_line(&trimmed, &line_len);
-
         if (line_len == 0)
             continue;
 
-        if (should_remove_line(ctx, trimmed))
+        if (should_remove_line(ctx, line))
         {
-            if (!append_removed(ctx, trimmed, line_len))
+            if (!append_removed(ctx, line, line_len))
             {
                 ok = false;
                 break;
@@ -120,14 +122,15 @@ static bool remove_on_file(const char *file, RemoveContext *ctx)
             continue;
         }
 
-        if (!write_line(out, trimmed, line_len))
+        if (!wb_writeln(&wb, line, line_len))
         {
             ok = false;
             break;
         }
     }
 
-    free(line);
+    if (!wb_flush(&wb))
+        ok = false;
 
     if (fclose(in) != 0)
         ok = false;
@@ -176,7 +179,7 @@ char *remove_entries(const char *dir, const char *fields_json, bool one)
     }
 
     RemoveContext ctx = make_remove_context(fields, one);
-    bool ok = buf_init(&ctx.state.removed) && buf_append(&ctx.state.removed, "[");
+    bool ok = buf_init_prealloc(&ctx.state.removed, 64 * 1024) && buf_append(&ctx.state.removed, "[");
 
     size_t file_limit = one && files.len > 0 ? 1 : files.len;
     for (size_t i = 0; ok && i < file_limit; i++)

@@ -18,8 +18,8 @@
     ],
     "type": "module",
     "dependencies": {
-        "@wxn0brp/db-core": "^0.12.2",
-        "@wxn0brp/db-storage-dir": "^0.120.2"
+        "@wxn0brp/db-core": "^0.12.7",
+        "@wxn0brp/db-storage-dir": "^0.120.4"
     },
     "devDependencies": {
         "@types/bun": "*",

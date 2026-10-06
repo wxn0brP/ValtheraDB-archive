@@ -32,32 +32,8 @@ typedef struct
     const char *error_message;
 } UpdateContext;
 
-static bool write_line(FILE *f, const char *line, size_t line_len)
+static bool append_updated_str(UpdateContext *ctx, const char *json_str, size_t json_len)
 {
-    return fwrite(line, 1, line_len, f) == line_len && fputc('\n', f) != EOF;
-}
-
-static void trim_line(char **line, size_t *line_len)
-{
-    while (*line_len > 0 && ((*line)[*line_len - 1] == '\n' || (*line)[*line_len - 1] == '\r'))
-        (*line)[--(*line_len)] = '\0';
-
-    while (**line == ' ' || **line == '\t')
-    {
-        (*line)++;
-        (*line_len)--;
-    }
-
-    while (*line_len > 0 && ((*line)[*line_len - 1] == ' ' || (*line)[*line_len - 1] == '\t'))
-        (*line)[--(*line_len)] = '\0';
-}
-
-static bool append_updated(UpdateContext *ctx, json_t *obj)
-{
-    char *dump = json_dumps(obj, JSON_COMPACT);
-    if (!dump)
-        return false;
-
     bool ok = true;
     if (!ctx->state.first_updated)
         ok = buf_append(&ctx->state.updated, ",");
@@ -65,10 +41,9 @@ static bool append_updated(UpdateContext *ctx, json_t *obj)
     if (ok)
     {
         ctx->state.first_updated = false;
-        ok = buf_append(&ctx->state.updated, dump);
+        ok = buf_append_len(&ctx->state.updated, json_str, json_len);
     }
 
-    free(dump);
     return ok;
 }
 
@@ -278,27 +253,28 @@ static bool update_on_file(const char *file, UpdateContext *ctx)
         return false;
     }
 
-    char *line = NULL;
-    size_t cap = 0;
-    ssize_t read;
+    LineReader lr;
+    lr_init(&lr, in);
+
+    WriteBuffer wb;
+    wb_init(&wb, out);
+
+    size_t line_len;
+    const char *line;
     bool ok = true;
 
-    while ((read = getline(&line, &cap, in)) != -1)
+    while ((line = lr_next(&lr, &line_len)) != NULL)
     {
-        size_t line_len = (size_t)read;
-        char *trimmed = line;
-        trim_line(&trimmed, &line_len);
-
         if (line_len == 0)
             continue;
 
-        json_t *json = json_loads(trimmed, 0, &ctx->error);
+        json_t *json = json_loads(line, 0, &ctx->error);
         if (!json)
             continue;
 
         if (!(ctx->opts.one && ctx->state.already_updated_one) && has_fields_advanced(json, ctx->opts.fields) > 0)
         {
-            if (!apply_updater(ctx, json) || !append_updated(ctx, json))
+            if (!apply_updater(ctx, json))
             {
                 ok = false;
                 json_decref(json);
@@ -313,7 +289,17 @@ static bool update_on_file(const char *file, UpdateContext *ctx)
                 break;
             }
 
-            ok = write_line(out, dump, strlen(dump));
+            size_t dump_len = strlen(dump);
+            
+            // Single serialization: use for both result buffer and file output
+            if (!append_updated_str(ctx, dump, dump_len) || !wb_writeln(&wb, dump, dump_len))
+            {
+                free(dump);
+                ok = false;
+                json_decref(json);
+                break;
+            }
+
             free(dump);
 
             if (ctx->opts.one)
@@ -321,7 +307,7 @@ static bool update_on_file(const char *file, UpdateContext *ctx)
         }
         else
         {
-            ok = write_line(out, trimmed, line_len);
+            ok = wb_writeln(&wb, line, line_len);
         }
 
         json_decref(json);
@@ -330,7 +316,8 @@ static bool update_on_file(const char *file, UpdateContext *ctx)
             break;
     }
 
-    free(line);
+    if (!wb_flush(&wb))
+        ok = false;
 
     if (fclose(in) != 0)
         ok = false;
@@ -389,7 +376,7 @@ char *update_entries(const char *dir, const char *fields_json, const char *updat
     }
 
     UpdateContext ctx = make_update_context(fields, updater, one);
-    bool ok = buf_init(&ctx.state.updated) && buf_append(&ctx.state.updated, "[");
+    bool ok = buf_init_prealloc(&ctx.state.updated, 64 * 1024) && buf_append(&ctx.state.updated, "[");
 
     for (size_t i = 0; ok && i < files.len; i++)
     {
