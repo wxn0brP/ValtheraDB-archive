@@ -11,6 +11,9 @@
     "author": "wxn0brP",
     "license": "MIT",
     "type": "module",
+    "bin": {
+        "valthera-bench": "src/local.ts"
+    },
     "scripts": {
         "build": "tsc && tsc-alias",
         "build:page": "bun build src/page/index.ts --outdir public --sourcemap --minify"
