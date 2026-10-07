@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.120.1](https://github.com/wxn0brP/ValtheraDB-storage-accdb/compare/v0.120.0...v0.120.1) (2026-10-07)
+
+
+### Features
+
+* improve ([1af115f](https://github.com/wxn0brP/ValtheraDB-storage-accdb/commit/1af115f8943813011e0adb58db5d05b8afce464c))
+
 ## [0.120.0](https://github.com/wxn0brP/ValtheraDB-storage-accdb/compare/v0.110.1-alpha.0...v0.120.0) (2026-10-01)
 
 
