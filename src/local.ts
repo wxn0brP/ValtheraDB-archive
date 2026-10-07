@@ -2,22 +2,14 @@
 
 import { ValtheraClass } from "@wxn0brp/db-core";
 import { existsSync } from "fs";
+import { parseArgs } from "node:util";
 import { basename, dirname, resolve } from "path";
 import { benchmarkLarge } from "./large";
 import { type BenchResult } from "./run";
 import { benchmarkSmall } from "./small";
+import { loadCustomSetup, writeResults } from "./utils";
 
-process.on("uncaughtException", err => {
-	console.error("Uncaught exception:", err);
-	process.exit(1);
-});
-
-process.on("unhandledRejection", reason => {
-	console.error("Unhandled rejection:", reason);
-	process.exit(1);
-});
-
-function formatTime(timeMs: number): string {
+function formatTime(timeMs: number) {
 	if (timeMs < 1) return `${(timeMs * 1000).toFixed(2)}μs`;
 	if (timeMs < 1000) return `${timeMs.toFixed(2)}ms`;
 	return `${(timeMs / 1000).toFixed(2)}s`;
@@ -25,101 +17,68 @@ function formatTime(timeMs: number): string {
 
 function printHeader(adapterName: string, adapterPath: string) {
 	console.log();
-	console.log("--------------------------------------------------");
+	console.log("──────────────────────────────────────────────────");
 	console.log("ValtheraDB Benchmark Runner");
-	console.log("--------------------------------------------------");
+	console.log("──────────────────────────────────────────────────");
 	console.log(`  Adapter: ${adapterName}`);
 	console.log(`  Path: ${adapterPath}`);
 	console.log(`  Date: ${new Date().toISOString()}`);
-	console.log("--------------------------------------------------");
+	console.log("──────────────────────────────────────────────────");
 	console.log();
 }
 
 function printResultsTable(results: BenchResult[]) {
-	const COL1_W = 25;
-	const COL2_W = 10;
-	const COL3_W = 25;
-	const COL1_LABEL = "Test";
-	const COL2_LABEL = "Time";
-
-	const pad = (s: string, w: number, align: "left" | "right" = "left") =>
-		align === "right" ? s.padStart(w) : s.padEnd(w);
-
-	const C = {
-		reset: "\x1b[0m",
-		dim: "\x1b[2m",
-		bold: "\x1b[1m",
-		cyan: "\x1b[36m",
-		green: "\x1b[32m",
-		yellow: "\x1b[33m",
-		red: "\x1b[31m",
-	};
+	const W_NAME = 25;
+	const W_TIME = 10;
+	const W_BAR = 25;
 
 	const times = results.map(r => r.time);
-	const minT = Math.min(...times);
-	const maxT = Math.max(...times);
-	const range = maxT - minT || 1;
+	const avg = times.reduce((a, b) => a + b, 0) / times.length;
+	const min = Math.min(...times);
+	const max = Math.max(...times);
 
-	const bar = (time: number, maxLen: number = COL3_W): string => {
-		const ratio = (time - minT) / range;
-		const len = Math.round(ratio * maxLen);
-		const filled = "\u2588".repeat(len || 1);
-		const empty = "\u2591".repeat(maxLen - (len || 1));
-		let color = C.green;
-		if (ratio > 0.66) color = C.red;
-		else if (ratio > 0.33) color = C.yellow;
-		return `${color}${filled}${C.reset}${C.dim}${empty}${C.reset}`;
-	};
+	const logMin = Math.log(min);
+	const logRange = Math.log(max) - logMin || 1;
 
-	const B = {
-		tl: "\u250c",
-		tm: "\u252c",
-		tr: "\u2510",
-		bl: "\u2514",
-		bm: "\u2534",
-		br: "\u2518",
-		ml: "\u251c",
-		mm: "\u253c",
-		mr: "\u2524",
-		h: "\u2500",
-		v: "\u2502",
-	};
+	const line = (l: string, m: string, r: string) =>
+		l +
+		"─".repeat(W_NAME + 2) +
+		m +
+		"─".repeat(W_TIME + 2) +
+		m +
+		"─".repeat(W_BAR + 2) +
+		r;
 
-	const hLine = (l: string, m1: string, m2: string, r: string, fill: string) =>
-		`${C.dim}${l}${fill.repeat(COL1_W + 2)}${m1}${fill.repeat(COL2_W + 2)}${m2}${fill.repeat(COL3_W + 2)}${r}${C.reset}`;
+	const row = (a: string, b: string, c: string) =>
+		`│ ${a.padEnd(W_NAME)} │ ${b.padStart(W_TIME)} │ ${c.padEnd(W_BAR)} │`;
 
-	const headerBorder = hLine(B.tl, B.tm, B.tm, B.tr, B.h);
-	const midBorder = hLine(B.ml, B.mm, B.mm, B.mr, B.h);
-	const footerBorder = hLine(B.bl, B.bm, B.bm, B.br, B.h);
+	const bar = (t: number) => {
+		const pos = (Math.log(t) - logMin) / logRange;
+		const len = Math.max(1, Math.round(pos * W_BAR));
 
-	const dimV = `${C.dim}${B.v}${C.reset}`;
-	const vSep = dimV;
+		const ratio = t / avg;
+		const color =
+			ratio < 0.5 ? "\x1b[32m" : ratio < 2 ? "\x1b[33m" : "\x1b[31m";
 
-	const row = (
-		name: string,
-		time: string,
-		timeBar: string,
-		isHeader: boolean = false,
-	) => {
-		const nameCol = pad(name, COL1_W);
-		const timeCol = pad(time, COL2_W, "right");
-		if (isHeader) {
-			return `${vSep} ${C.bold}${C.cyan}${nameCol}${C.reset} ${vSep} ${C.bold}${C.cyan}${timeCol}${C.reset} ${vSep} ${timeBar} ${vSep}`;
-		}
-		return `${vSep} ${nameCol} ${vSep} ${timeCol} ${vSep} ${timeBar} ${vSep}`;
+		return (
+			color +
+			"█".repeat(len) +
+			"\x1b[0m" +
+			"\x1b[2m" +
+			"░".repeat(W_BAR - len) +
+			"\x1b[0m"
+		);
 	};
 
 	console.log();
-	console.log(`${headerBorder}`);
-	console.log(
-		`${row(COL1_LABEL, COL2_LABEL, pad("Distribution", COL3_W), true)}`,
-	);
-	console.log(`${midBorder}`);
-	for (let i = 0; i < results.length; i++) {
-		const r = results[i];
-		console.log(`${row(r.name, formatTime(r.time), bar(r.time), false)}`);
-	}
-	console.log(`${footerBorder}`);
+	console.log(line("┌", "┬", "┐"));
+	console.log(row("Test", "Time", "Distribution"));
+	console.log(line("├", "┼", "┤"));
+
+	for (const r of results)
+		console.log(row(r.name, formatTime(r.time), bar(r.time)));
+
+	console.log(line("└", "┴", "┘"));
 	console.log();
 }
 
@@ -133,95 +92,99 @@ function printSummary(allResults: BenchResult[], adapterName: string) {
 	console.log();
 }
 
-async function main() {
-	const adapterPathArg = process.argv[2] || "./valthera-e2e/index.ts";
-	const adapterPath = resolve(process.cwd(), adapterPathArg);
+const { values, positionals } = parseArgs({
+	options: {
+		small: {
+			type: "boolean",
+			short: "s",
+		},
+		json: {
+			type: "boolean",
+			short: "j",
+		},
+		jsonFile: {
+			type: "string",
+			short: "f",
+		},
+	},
+	allowPositionals: true,
+});
 
-	if (!existsSync(adapterPath)) {
-		console.error(`Adapter file not found: ${adapterPath}`);
-		process.exit(1);
-	}
+const smallOnly = values.small ?? false;
+const jsonOutput = values.json || values.jsonFile;
+const jsonFile = values.jsonFile || "results.json";
+const adapterPathArg = positionals[0] || "./valthera-e2e/index.ts";
+const adapterPath = resolve(process.cwd(), adapterPathArg);
 
-	const pathParts = adapterPath.split("/");
-	const valtheraE2eIndex = pathParts.lastIndexOf("valthera-e2e");
-	const adapterName =
-		valtheraE2eIndex > 0
-			? pathParts[valtheraE2eIndex - 1]
-			: basename(dirname(adapterPath));
+if (!existsSync(adapterPath)) {
+	console.error(`Adapter file not found: ${adapterPath}`);
+	process.exit(1);
+}
 
-	const adapterModule = await import(adapterPath);
-	const adapterFactory = adapterModule.default;
+const pathParts = adapterPath.split("/");
+const valtheraE2eIndex = pathParts.lastIndexOf("valthera-e2e");
+const adapterName =
+	valtheraE2eIndex > 0
+		? pathParts[valtheraE2eIndex - 1]
+		: basename(dirname(adapterPath));
 
-	if (typeof adapterFactory !== "function") {
-		console.error(`Invalid adapter factory in ${adapterPath}`);
-		console.error("Expected default export to be a function");
-		process.exit(1);
-	}
+const adapterModule = await import(adapterPath);
+const adapterFactory = adapterModule.default;
 
-	printHeader(adapterName, adapterPath);
+if (typeof adapterFactory !== "function") {
+	console.error(`Invalid adapter factory in ${adapterPath}`);
+	console.error("Expected default export to be a function");
+	process.exit(1);
+}
 
-	console.log("  Loading adapter...");
-	const adapter = await adapterFactory();
+printHeader(adapterName, adapterPath);
 
-	if (!adapter) {
-		console.error("Adapter factory returned null");
-		process.exit(1);
-	}
+console.log("  Loading adapter...");
+const adapter = await adapterFactory();
 
-	const db = new ValtheraClass({
-		adapter,
-	});
-	await db.init();
+if (!adapter) {
+	console.error("Adapter factory returned null");
+	process.exit(1);
+}
 
-	const customSetupPath = resolve(
-		import.meta.dirname,
-		"custom",
-		`${adapterName}.js`,
-	);
-	let onAfterAdd = async () => {};
+const db = new ValtheraClass({
+	adapter,
+});
+await db.init();
 
-	if (existsSync(customSetupPath)) {
-		console.log(`  Using custom setup for ${adapterName}`);
-		const customModule = await import(customSetupPath);
+const onAfterAdd = await loadCustomSetup(adapterName, db.adapter);
 
-		if (typeof customModule.init === "function") {
-			await customModule.init(db.adapter);
-		}
+console.log();
 
-		if (typeof customModule.onAfterAdd === "function") {
-			onAfterAdd = () => customModule.onAfterAdd(db.adapter);
-		}
-	} else {
-		console.log(`  No custom setup found for ${adapterName}`);
-	}
+const allResults: BenchResult[] = [];
 
-	console.log();
+console.log("\x1b[1m--- Small collection (users, 10k) ---\x1b[0m");
+const smallResults = await benchmarkSmall(db.c("users"));
+allResults.push(...smallResults);
+console.log();
 
-	const allResults: BenchResult[] = [];
-
-	console.log("\x1b[1m--- Small collection (users, 10k) ---\x1b[0m");
-	const smallResults = await benchmarkSmall(db.c("users"));
-	allResults.push(...smallResults);
-	console.log();
-
+if (!smallOnly) {
 	console.log("\x1b[1m--- Large collection (posts, 200k) ---\x1b[0m");
 	const largeResults = await benchmarkLarge(db.c("posts"), onAfterAdd);
 	allResults.push(...largeResults);
 	console.log();
-
-	console.log("\x1b[1m--- Results ---\x1b[0m");
-	printResultsTable(allResults);
-
-	printSummary(allResults, adapterName);
-
-	if (typeof db.close === "function") {
-		await db.close().catch(() => {});
-	}
-
-	process.exit(0);
+} else {
+	console.log("\x1b[2m  (small-only mode)\x1b[0m");
 }
 
-main().catch(err => {
-	console.error("Fatal error:", err);
-	process.exit(1);
-});
+console.log("\x1b[1m--- Results ---\x1b[0m");
+printResultsTable(allResults);
+
+printSummary(allResults, adapterName);
+
+if (jsonOutput) {
+	writeResults(jsonFile, {
+		results: allResults,
+		adapter: adapterName,
+		coreVersion: db.version,
+		adapterVersion: db.adapter?.version || "N/A",
+	});
+	console.log(`\x1b[2mResults saved to ${jsonFile}\x1b[0m`);
+}
+
+await db.close();
