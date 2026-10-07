@@ -2,6 +2,8 @@ import { genId, ValtheraClass } from "@wxn0brp/db-core";
 import { ActionsBase } from "@wxn0brp/db-core/base/actions";
 import { Data } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
+import { Id } from "@wxn0brp/db-core/types/Id";
+import { TransactionHandle } from "@wxn0brp/db-core/types/transaction";
 import odbc from "odbc";
 import { find } from "./find";
 import { remove } from "./remove";
@@ -95,6 +97,33 @@ export class AccDBValthera extends ActionsBase {
 			);
 
 		return true;
+	}
+
+	async beginTransaction(id: Id): Promise<TransactionHandle> {
+		await this.db.beginTransaction();
+		return {
+			id,
+		};
+	}
+
+	async commitTransaction(handle: TransactionHandle) {
+		await this.db.commit();
+	}
+
+	async rollbackTransaction(handle: TransactionHandle) {
+		await this.db.rollback();
+	}
+
+	async createIndex(config: VQueryT.CreateIndex) {
+		const { collection, index } = config;
+		const { fields, opts } = index;
+
+		const indexName = opts?.name || `idx_${collection}_${fields.join("_")}`;
+		const uniqueStr = opts?.unique ? "UNIQUE " : "";
+		const fieldsStr = fields.map(f => `[${f}]`).join(", ");
+
+		const sql = `CREATE ${uniqueStr}INDEX [${indexName}] ON [${collection}] (${fieldsStr})`;
+		await this.db.query(sql);
 	}
 }
 
