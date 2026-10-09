@@ -2,10 +2,12 @@ import type { TestDefinition } from "../types";
 import { addTests } from "./add";
 import { advancedAggregationsTests } from "./advanced-aggregations";
 import { advancedEventsTests } from "./advanced-events";
+import { bulkAddTests } from "./bulk-add";
 import { collectionApiTests } from "./collection-api";
 import { collectionMgmtTests } from "./collection-mgmt";
 import { compositeTests } from "./composite";
 import { concurrencyTests } from "./concurrency";
+import { countTests } from "./count";
 import { dataTypesTests } from "./data-types";
 import { edgeTests } from "./edge";
 import { eventsTests } from "./events";
@@ -47,4 +49,6 @@ export const tests: TestDefinition[] = [
 	...advancedAggregationsTests,
 	...sortingEdgeCasesTests,
 	...transactionTests,
+	...bulkAddTests,
+	...countTests,
 ];
