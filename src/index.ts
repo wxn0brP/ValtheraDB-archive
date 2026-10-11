@@ -1,9 +1,10 @@
 import { forgeTypedValthera, Id, ValtheraClass } from "@wxn0brp/db-core";
 import { ActionsBase } from "@wxn0brp/db-core/base/actions";
-import { addId } from "@wxn0brp/db-core/helpers/addId";
+import { addId, addIdBulk } from "@wxn0brp/db-core/helpers/addId";
 import { Data } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { TransactionHandle } from "@wxn0brp/db-core/types/transaction";
+import { buildWhere } from "./buildWhere";
 import { MAX_STMT_CACHE } from "./const";
 import { find } from "./find";
 import { remove } from "./remove";
@@ -279,6 +280,70 @@ export class SQLiteValthera extends ActionsBase {
 		const sql = `CREATE ${uniqueStr}INDEX IF NOT EXISTS ${qid(indexName)} ON ${qid(collection)} (${fieldsStr})`;
 		const stmt = await this._prepare(sql);
 		await execStmt(stmt, "run");
+	}
+
+	async removeIndex(config: VQueryT.RemoveIndex) {
+		await this._waitForTx();
+		const { collection, index } = config;
+		const { fields, opts } = index;
+
+		const indexName = opts?.name || `idx_${collection}_${fields.join("_")}`;
+
+		const sql = `DROP INDEX IF EXISTS ${qid(indexName)}`;
+		const stmt = await this._prepare(sql);
+		await execStmt(stmt, "run");
+	}
+
+	async count(config: VQueryT.Count) {
+		if (!config.transaction) await this._waitForTx();
+		const { collection, search } = config;
+
+		const affinities = await this._getColumnAffinities(collection);
+		const where = buildWhere(search, affinities);
+
+		if (where.postFilter) {
+			return (await this.find(config as VQueryT.Find)).length;
+		}
+
+		const sql = where.sql
+			? `SELECT COUNT(*) as count FROM ${qid(collection)} WHERE ${where.sql}`
+			: `SELECT COUNT(*) as count FROM ${qid(collection)}`;
+
+		const stmt = await this._prepare(sql);
+		const row = await execStmt(stmt, "get", ...where.values);
+		return (row as any)?.count ?? 0;
+	}
+
+	async bulkAdd(config: VQueryT.BulkAdd) {
+		if (!config.transaction) await this._waitForTx();
+		const { collection, datas } = config;
+		if (datas.length === 0) return datas;
+
+		await addIdBulk(config, this, true);
+
+		const keySet = new Set<string>();
+		for (const data of datas)
+			for (const k of Object.keys(data))
+				if (data[k] !== undefined) keySet.add(k);
+		const keys = [
+			...keySet,
+		];
+
+		await this._ensureColumns(collection, keys);
+		const affinities = await this._getColumnAffinities(collection);
+
+		const placeholders = keys.map(() => "?").join(", ");
+		const stmt = await this._prepare(
+			`INSERT INTO ${qid(collection)} (${keys.map(k => qid(k)).join(", ")}) VALUES (${placeholders})`,
+		);
+		for (const data of datas) {
+			const values = keys.map(k => {
+				const v = data[k];
+				return v === undefined ? null : toSqlValue(v, affinities[k]);
+			});
+			await execStmt(stmt, "run", ...values);
+		}
+		return datas;
 	}
 }
 
