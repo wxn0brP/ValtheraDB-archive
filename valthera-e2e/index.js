@@ -1,4 +1,4 @@
-import { makeConnect, AccDBValthera } from "../src/index.js";
+import { makeConnect, AccDBValthera } from "../dist/index.js";
 import { unlink } from "fs/promises";
 
 const TEST_FILE = `./valthera-e2e-test.accdb`;
