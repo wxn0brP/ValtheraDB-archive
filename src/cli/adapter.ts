@@ -1,4 +1,5 @@
 import { ValtheraClass } from "@wxn0brp/db-core";
+import { pathToFileURL } from "node:url";
 import type { AdapterFactory } from "../types";
 
 export async function loadAdapter(path: string): Promise<AdapterFactory> {
@@ -6,7 +7,7 @@ export async function loadAdapter(path: string): Promise<AdapterFactory> {
 
 	let mod: any;
 	try {
-		mod = await import(resolved);
+		mod = await import(pathToFileURL(resolved).href);
 	} catch (err: any) {
 		console.error(`Error: Failed to import adapter: ${resolved}`);
 		console.error(`  ${err.message ?? err}`);
