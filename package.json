@@ -1,33 +1,33 @@
 {
-    "name": "@wxn0brp/db-lock",
+    "name": "@wxn0brp/db-plugin-lock",
     "version": "0.120.0",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
-    "description": "Provides file-based locking for thread-safe ValtheraDB operations.",
+    "description": "Provides file-based locking plugin for ValtheraDB",
     "repository": {
         "type": "git",
-        "url": "https://github.com/wxn0brP/ValtheraDB-lock.git"
+        "url": "https://github.com/wxn0brP/ValtheraDB-plugin-lock.git"
     },
-    "homepage": "https://github.com/wxn0brP/ValtheraDB-lock",
+    "homepage": "https://github.com/wxn0brP/ValtheraDB-plugin-lock",
     "author": "wxn0brP",
     "license": "MIT",
     "type": "module",
     "keywords": [
         "valthera",
         "valtheradb",
-        "vdb-adapter"
+        "vdb-plugin"
     ],
     "scripts": {
         "build": "tsc && tsc-alias"
     },
     "devDependencies": {
         "@types/bun": "*",
-        "@wxn0brp/db-core": "^0.12.0",
+        "@wxn0brp/db-core": "^0.12.9",
         "tsc-alias": "^1",
         "typescript": "^7"
     },
     "peerDependencies": {
-        "@wxn0brp/db-core": "^0.12.0"
+        "@wxn0brp/db-core": "^0.12.9"
     },
     "files": [
         "dist"
