@@ -7,10 +7,10 @@
     "author": "wxn0brP",
     "license": "MIT",
     "type": "module",
-    "homepage": "https://github.com/wxn0brP/ValtheraDB-crdt",
+    "homepage": "https://github.com/wxn0brP/ValtheraDB-plugin-crdt",
     "repository": {
         "type": "git",
-        "url": "https://github.com/wxn0brP/ValtheraDB-crdt.git"
+        "url": "https://github.com/wxn0brP/ValtheraDB-plugin-crdt.git"
     },
     "keywords": [
         "valthera",
