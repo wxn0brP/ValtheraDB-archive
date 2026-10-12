@@ -13,7 +13,7 @@ export interface Opts {
 
 export interface ResolvedConfig {
 	pkg: string;
-	variant: string;
+	variant?: string;
 	opts: any[];
 }
 
@@ -31,7 +31,7 @@ export type _ReplaceReturn<T, S extends Record<string, Data>> = T extends (
 ) => any
 	? ((...args: A) => ValtheraLazy<S>) & {
 			[K in keyof T]: _ReplaceReturn<T[K], S>;
-		} // <-- Zmiana tutaj
+		}
 	: T extends object
 		? { [K in keyof T]: _ReplaceReturn<T[K], S> }
 		: T;

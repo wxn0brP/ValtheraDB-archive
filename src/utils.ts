@@ -29,7 +29,7 @@ export function parseId(id: string) {
 	if (!id || !id.trim())
 		throw new InvalidOptsError(
 			"id",
-			'must be a non-empty string in format "package:variant"',
+			'must be a non-empty string in format "package" or "package:variant"',
 		);
 
 	const idx = id.indexOf(":");
@@ -41,7 +41,7 @@ export function parseId(id: string) {
 	const [pkg, variant] = id.split(":");
 	return {
 		pkg,
-		variant: variant ?? pkg,
+		variant,
 	};
 }
 

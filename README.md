@@ -100,8 +100,8 @@ The resolver determines which database adapter to use based on the following pri
 |--------|------|-------------|
 | `name` | `string` | Identifier used for environment variable lookup (`VALTHERA_<NAME>`) |
 | `opts` | `any[]` | Options passed to the database adapter constructor |
-| `def` | `string` | Default adapter in format `"package:variant"` |
-| `force` | `string` | Force a specific adapter in format `"package:variant"` |
+| `def` | `string` | Default adapter in format `"package"` or `"package:variant"` |
+| `force` | `string` | Force a specific adapter in format `"package"` or `"package:variant"` |
 
 ### Environment Variables
 
