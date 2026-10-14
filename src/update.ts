@@ -1,7 +1,7 @@
 import { Data, DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { updateObj } from "@wxn0brp/db-core/utils/process";
-import { SQLiteValthera } from ".";
+import { SQLiteValthera } from "./actions";
 import { buildWhere } from "./buildWhere";
 import { COMPLEX_OPS } from "./const";
 import { find } from "./find";

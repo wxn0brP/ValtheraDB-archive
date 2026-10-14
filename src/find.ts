@@ -2,7 +2,7 @@ import { Data } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { findUtil } from "@wxn0brp/db-core/utils/action";
 import { findObj } from "@wxn0brp/db-core/utils/process";
-import { SQLiteValthera } from ".";
+import { SQLiteValthera } from "./actions";
 import { buildWhere } from "./buildWhere";
 import { decodeSqlValue, execStmt, qid } from "./utils";
 

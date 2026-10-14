@@ -1,6 +1,6 @@
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { SQLiteValthera } from ".";
+import { SQLiteValthera } from "./actions";
 import { BATCH_SIZE } from "./const";
 import { find } from "./find";
 import { execStmt, qid } from "./utils";
