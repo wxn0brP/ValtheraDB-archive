@@ -1,0 +1,50 @@
+{
+    "name": "@wxn0brp/db-spec-ged",
+    "version": "0.0.1",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "description": "ValtheraDB Special Storage GEDCOM",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/wxn0brP/ValtheraDB-spec-ged.git"
+    },
+    "homepage": "https://github.com/wxn0brP/ValtheraDB-spec-ged",
+    "author": "wxn0brP",
+    "license": "MIT",
+    "type": "module",
+    "keywords": [
+        "valthera",
+        "valtheradb",
+        "vdb-spec",
+        "gedcom",
+        "genealogy"
+    ],
+    "scripts": {
+        "build": "tsc && tsc-alias"
+    },
+    "peerDependencies": {
+        "@wxn0brp/db-core": "^0.12.9"
+    },
+    "devDependencies": {
+        "@types/bun": "*",
+        "@wxn0brp/biome": "*",
+        "@wxn0brp/db-core": "^0.12.9",
+        "tsc-alias": "^1",
+        "typescript": "^7"
+    },
+    "files": [
+        "dist"
+    ],
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js",
+            "default": "./dist/index.js"
+        },
+        "./*": {
+            "types": "./dist/*.d.ts",
+            "import": "./dist/*.js",
+            "default": "./dist/*.js"
+        }
+    }
+}
