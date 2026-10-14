@@ -1,5 +1,12 @@
 import { Id } from "@wxn0brp/db-core";
 import { ActionsBase } from "@wxn0brp/db-core/base/actions";
+import {
+	AdapterCloseError,
+	AdapterError,
+	AdapterInitError,
+	ErrorCodes,
+	TransactionError,
+} from "@wxn0brp/db-core/errors";
 import { addId } from "@wxn0brp/db-core/helpers/addId";
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
@@ -24,6 +31,11 @@ export class MongoDbAction extends ActionsBase {
 	_db: Db;
 	_session: ClientSession | null = null;
 	version = version;
+	capabilities = {
+		transactions: true,
+		indexes: true,
+		persistent: true,
+	};
 
 	constructor(
 		mongoUri: string,
@@ -36,11 +48,23 @@ export class MongoDbAction extends ActionsBase {
 	}
 
 	async init() {
-		await this._client.connect();
+		try {
+			await this._client.connect();
+		} catch (err) {
+			throw new AdapterInitError(err, {
+				db: this._db.databaseName,
+			});
+		}
 	}
 
 	async close() {
-		await this._client.close();
+		try {
+			await this._client.close();
+		} catch (err) {
+			throw new AdapterCloseError(err, {
+				db: this._db.databaseName,
+			});
+		}
 	}
 
 	_getCollection(name: string): Collection {
@@ -441,7 +465,10 @@ export class MongoDbAction extends ActionsBase {
 			return true;
 		} catch (error: any) {
 			if (error.codeName === "NamespaceExists") return false;
-			throw error;
+			throw new AdapterError(error, {
+				op: "ensureCollection",
+				collection,
+			});
 		}
 	}
 
@@ -456,11 +483,23 @@ export class MongoDbAction extends ActionsBase {
 			return true;
 		} catch (error: any) {
 			if (error.codeName === "NamespaceNotFound") return true;
-			throw error;
+			throw new AdapterError(error, {
+				op: "removeCollection",
+				collection,
+			});
 		}
 	}
 
 	async beginTransaction(id: Id): Promise<TransactionHandle> {
+		if (this._session)
+			throw new TransactionError("transaction already active", {
+				code: ErrorCodes.TRANSACTION_FAILED,
+				context: {
+					op: "beginTransaction",
+					handle: id,
+				},
+			});
+
 		this._session = this._client.startSession();
 		this._session.startTransaction();
 		return {
@@ -471,15 +510,37 @@ export class MongoDbAction extends ActionsBase {
 
 	async commitTransaction(handle: TransactionHandle) {
 		const session = handle._adapterData as ClientSession;
-		await session.commitTransaction();
-		await session.endSession();
+		try {
+			await session.commitTransaction();
+			await session.endSession();
+		} catch (err) {
+			this._session = null;
+			throw new TransactionError("Transaction commit failed", {
+				cause: err,
+				context: {
+					op: "commitTransaction",
+					handle: handle.id,
+				},
+			});
+		}
 		this._session = null;
 	}
 
 	async rollbackTransaction(handle: TransactionHandle) {
 		const session = handle._adapterData as ClientSession;
-		await session.abortTransaction();
-		await session.endSession();
+		try {
+			await session.abortTransaction();
+			await session.endSession();
+		} catch (err) {
+			this._session = null;
+			throw new TransactionError("Transaction rollback failed", {
+				cause: err,
+				context: {
+					op: "rollbackTransaction",
+					handle: handle.id,
+				},
+			});
+		}
 		this._session = null;
 	}
 
@@ -495,5 +556,30 @@ export class MongoDbAction extends ActionsBase {
 			unique: opts?.unique,
 			name: opts?.name,
 		});
+	}
+
+	async removeIndex(config: VQueryT.RemoveIndex) {
+		const { collection, index } = config;
+		const { fields, opts } = index;
+		const coll = this._getCollection(collection);
+		const indexName = opts?.name || `idx_${collection}_${fields.join("_")}`;
+		await coll.dropIndex(indexName);
+	}
+
+	async count(config: VQueryT.Count): Promise<number> {
+		const { collection, search } = config;
+		const coll = this._getCollection(collection);
+		const opts = this._session
+			? {
+					session: this._session,
+				}
+			: {};
+
+		if (typeof search === "function" || needsJsFallback(search)) {
+			return (await this.find(config as VQueryT.Find)).length;
+		}
+
+		const mongoQuery = translateQuery(search);
+		return await coll.countDocuments(mongoQuery, opts);
 	}
 }

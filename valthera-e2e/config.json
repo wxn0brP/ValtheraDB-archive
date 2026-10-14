@@ -1,7 +1,7 @@
 {
-    "skip": {
-        "domains": [
-            "transaction"
-        ]
-    }
+	"skip": {
+		"domains": [
+			"transaction"
+		]
+	}
 }
