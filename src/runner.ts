@@ -1,4 +1,5 @@
-import { ValtheraClass } from "@wxn0brp/db-core";
+import { isValtheraError, ValtheraClass } from "@wxn0brp/db-core";
+import type { AdapterCapabilities } from "@wxn0brp/db-core";
 import { tests } from "./tests";
 import type {
 	AdapterFactory,
@@ -44,31 +45,18 @@ function filterTests(opts?: RunnerOptions) {
 	return filtered;
 }
 
-async function checkTransactionSupport(
+async function getCapabilities(
 	dbFactory: () => Promise<ValtheraClass>,
-) {
+): Promise<AdapterCapabilities | null> {
 	let db: ValtheraClass | null = null;
 	try {
 		db = await dbFactory();
-		await db.transaction(
-			[
-				"pride",
-			],
-			async () => {},
-		);
-		await db.close();
-		return true;
-	} catch (err: any) {
+		return await db.capabilities();
+	} catch (err) {
+		verbose(`Failed to read adapter capabilities: ${err}`);
+		return null;
+	} finally {
 		if (db) await db.close().catch(() => {});
-		const message = err?.message ?? String(err);
-		if (
-			message.toLowerCase().includes("transactions are not supported") ||
-			message.includes("beginTransaction is not a function") ||
-			message.includes("beginTransaction is undefined")
-		) {
-			return false;
-		}
-		throw err;
 	}
 }
 
@@ -89,13 +77,14 @@ export async function runTests(
 
 	const testList = filterTests(opts);
 	const hasTransactionTests = testList.some(t => t.domain === "transaction");
-	let transactionsSupported = true;
+	let transactionsSupported = false;
 
 	if (hasTransactionTests) {
-		transactionsSupported = await checkTransactionSupport(dbFactory);
+		const capabilities = await getCapabilities(dbFactory);
+		transactionsSupported = capabilities?.transactions === true;
 		if (!transactionsSupported) {
 			verbose(
-				"Adapter does not support transactions - transaction tests will be skipped",
+				"Adapter does not declare transaction support - transaction tests will be skipped",
 			);
 		}
 	}
@@ -144,6 +133,8 @@ export async function runTests(
 				name: test.name,
 				status: "failed",
 				error: err?.message ?? String(err),
+				code: isValtheraError(err) ? err.code : undefined,
+				suggestion: isValtheraError(err) ? err.suggestion : undefined,
 				duration,
 			});
 			failed++;

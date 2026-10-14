@@ -46,6 +46,9 @@ valthera-e2e -h
 | `edge-cases` | Empty search, special characters, nested objects |
 | `events` | Event emission on operations |
 | `collection-api` | `Collection` helper API (`db.c()`) |
+| `transaction` | Transaction commit/rollback (runs only when `capabilities.transactions` is `true`) |
+| `capabilities` | `db.capabilities()` shape, consistency, and capability/behavior agreement |
+| `errors` | Unified `ValtheraError` codes surfaced by the public API |
 
 ## Adapter Contract
 

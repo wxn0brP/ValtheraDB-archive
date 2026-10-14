@@ -16,4 +16,6 @@ export const VALID_DOMAINS: TestDomain[] = [
 	"events",
 	"collection-api",
 	"transaction",
+	"capabilities",
+	"errors",
 ];

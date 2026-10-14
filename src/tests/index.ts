@@ -3,6 +3,7 @@ import { addTests } from "./add";
 import { advancedAggregationsTests } from "./advanced-aggregations";
 import { advancedEventsTests } from "./advanced-events";
 import { bulkAddTests } from "./bulk-add";
+import { capabilitiesTests } from "./capabilities";
 import { collectionApiTests } from "./collection-api";
 import { collectionMgmtTests } from "./collection-mgmt";
 import { compositeTests } from "./composite";
@@ -10,6 +11,7 @@ import { concurrencyTests } from "./concurrency";
 import { countTests } from "./count";
 import { dataTypesTests } from "./data-types";
 import { edgeTests } from "./edge";
+import { errorsTests } from "./errors";
 import { eventsTests } from "./events";
 import { findAdvancedTests } from "./find-advanced";
 import { findOpTests } from "./find-op";
@@ -51,4 +53,6 @@ export const tests: TestDefinition[] = [
 	...transactionTests,
 	...bulkAddTests,
 	...countTests,
+	...capabilitiesTests,
+	...errorsTests,
 ];

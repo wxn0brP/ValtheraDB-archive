@@ -56,8 +56,15 @@ export function printResults(result: Awaited<ReturnType<typeof runTests>>) {
 				`  ${color}${icon} ${r.name}${reset} (${formatDuration(r.duration)})`,
 			);
 
-			if (r.status === "failed" && r.error)
+			if (r.status === "failed" && r.error) {
 				console.log(`    ${getColor("failed")}${r.error}\x1b[0m`);
+				if (r.code)
+					console.log(`    ${getColor("failed")}code: ${r.code}\x1b[0m`);
+				if (r.suggestion)
+					console.log(
+						`    ${getColor("failed")}suggestion: ${r.suggestion}\x1b[0m`,
+					);
+			}
 		}
 
 		console.log("");

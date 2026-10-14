@@ -15,13 +15,17 @@ export type TestDomain =
 	| "events"
 	| "collection-api"
 	| "lifecycle"
-	| "transaction";
+	| "transaction"
+	| "capabilities"
+	| "errors";
 
 export interface TestResult {
 	domain: TestDomain;
 	name: string;
 	status: "passed" | "failed" | "skipped";
 	error?: string;
+	code?: string;
+	suggestion?: string;
 	duration: number;
 }
 

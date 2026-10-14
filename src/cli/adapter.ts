@@ -1,6 +1,21 @@
-import { ValtheraClass } from "@wxn0brp/db-core";
+import { isValtheraError, ValtheraClass } from "@wxn0brp/db-core";
 import { pathToFileURL } from "node:url";
 import type { AdapterFactory } from "../types";
+
+const CAPABILITY_KEYS = [
+	"transactions",
+	"indexes",
+	"persistent",
+] as const;
+
+function printError(err: unknown) {
+	const message = err instanceof Error ? err.message : String(err);
+	console.error(`  ${message}`);
+	if (isValtheraError(err)) {
+		console.error(`  code: ${err.code}`);
+		if (err.suggestion) console.error(`  suggestion: ${err.suggestion}`);
+	}
+}
 
 export async function loadAdapter(path: string): Promise<AdapterFactory> {
 	const resolved = path.startsWith(".") ? `${process.cwd()}/${path}` : path;
@@ -59,9 +74,17 @@ export async function validateAdapterFactory(
 		for (const method of requiredMethods)
 			if (typeof db[method as keyof typeof db] !== "function")
 				throw new Error(`ValtheraClass missing required method: ${method}`);
+
+		const capabilities = await db.capabilities();
+		if (!capabilities || typeof capabilities !== "object")
+			throw new Error("Adapter must expose capabilities()");
+
+		for (const key of CAPABILITY_KEYS)
+			if (typeof capabilities[key] !== "boolean")
+				throw new Error(`capabilities().${key} must be a boolean`);
 	} catch (err: any) {
 		console.error(`Error: Adapter initialization failed`);
-		console.error(`  ${err.message ?? err}`);
+		printError(err);
 		if (db) await db.close().catch(() => {});
 		process.exit(1);
 	}
