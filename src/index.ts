@@ -380,6 +380,10 @@ export function createSQLiteValthera<T extends Record<string, Data> = {}>(
 }
 
 export const DYNAMIC = {
+	def(file: string, keys: Record<string, string> = {}, opts?: any) {
+		if (typeof Bun !== "undefined") return DYNAMIC.bun(file, keys, opts);
+		return DYNAMIC.node(file, keys, opts);
+	},
 	sqlite(file: string, keys: Record<string, string> = {}, opts?: any) {
 		if (typeof Bun !== "undefined") return DYNAMIC.bun(file, keys, opts);
 		return DYNAMIC.node(file, keys, opts);
