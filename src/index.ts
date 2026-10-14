@@ -1,5 +1,6 @@
 import { forgeTypedValthera, Id, ValtheraClass } from "@wxn0brp/db-core";
 import { ActionsBase } from "@wxn0brp/db-core/base/actions";
+import { AdapterError, QueryValidationError } from "@wxn0brp/db-core/errors";
 import { addId, addIdBulk } from "@wxn0brp/db-core/helpers/addId";
 import { Data } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
@@ -23,6 +24,11 @@ export class SQLiteValthera extends ActionsBase {
 	_txActive = false;
 	_txWaiters: Array<() => void> = [];
 	version = version;
+	capabilities = {
+		transactions: true,
+		indexes: true,
+		persistent: true,
+	};
 
 	constructor(
 		public db: SupportedDB,
@@ -132,10 +138,16 @@ export class SQLiteValthera extends ActionsBase {
 			if (q && (q.all || q.get || q.run)) {
 				stmt = q;
 			} else {
-				throw new Error("Unsupported database");
+				throw new AdapterError(new Error("Unsupported database"), {
+					sql,
+					driver: "query",
+				});
 			}
 		} else {
-			throw new Error("Unsupported database");
+			throw new AdapterError(new Error("Unsupported database"), {
+				sql,
+				driver: "unknown",
+			});
 		}
 
 		this._cacheStmt(sql, stmt);
@@ -166,7 +178,13 @@ export class SQLiteValthera extends ActionsBase {
 
 		const entries = Object.entries(data).filter(([, v]) => v !== undefined);
 		if (entries.length === 0)
-			throw new Error(`Cannot insert an empty document into "${collection}"`);
+			throw new QueryValidationError(
+				`Cannot insert an empty document into "${collection}"`,
+				{
+					collection,
+					op: "add",
+				},
+			);
 
 		await this._ensureColumns(
 			collection,
@@ -239,8 +257,12 @@ export class SQLiteValthera extends ActionsBase {
 	async ensureCollection(collection: string): Promise<boolean> {
 		const issetCollection = await this.issetCollection(collection);
 		if (!issetCollection) {
-			throw new Error(
+			throw new QueryValidationError(
 				`Collection "${collection}" not found. Please create it first.`,
+				{
+					collection,
+					op: "ensureCollection",
+				},
 			);
 		}
 		return true;
