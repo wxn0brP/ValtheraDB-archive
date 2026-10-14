@@ -1,0 +1,18 @@
+{
+	"skip": {
+		"domains": [
+			"crud-add",
+			"crud-read",
+			"crud-update",
+			"crud-remove",
+			"search-operators",
+			"update-operators",
+			"find-options",
+			"composite-operations",
+			"edge-cases",
+			"events",
+			"collection-api",
+			"transaction"
+		]
+	}
+}
