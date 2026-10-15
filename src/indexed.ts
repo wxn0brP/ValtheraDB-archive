@@ -1,5 +1,10 @@
 import { ActionsBase } from "@wxn0brp/db-core/base/actions";
-import { addId } from "@wxn0brp/db-core/helpers/addId";
+import {
+	AdapterCloseError,
+	AdapterError,
+	AdapterInitError,
+} from "@wxn0brp/db-core/errors";
+import { addId, addIdBulk } from "@wxn0brp/db-core/helpers/addId";
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { findObj, matchObj, updateObj } from "@wxn0brp/db-core/utils/process";
@@ -10,6 +15,11 @@ export class IndexedDBActions extends ActionsBase {
 	_version = 1;
 	_inited = false;
 	version = version;
+	capabilities = {
+		transactions: false,
+		indexes: false,
+		persistent: true,
+	};
 
 	constructor(public name: string) {
 		super();
@@ -19,28 +29,45 @@ export class IndexedDBActions extends ActionsBase {
 		return "vdb_" + this.name;
 	}
 
+	_dbContext() {
+		return {
+			adapter: "IndexedDB",
+			db: this._getDBName(),
+		};
+	}
+
+	_requireDb(): IDBDatabase {
+		if (!this.db)
+			throw new AdapterError("Database not initialized", this._dbContext());
+		return this.db;
+	}
+
 	async init() {
 		if (this.db) return;
 
-		return new Promise<void>((resolve, reject) => {
-			const request = indexedDB.open(this._getDBName());
+		try {
+			await new Promise<void>((resolve, reject) => {
+				const request = indexedDB.open(this._getDBName());
 
-			request.onerror = () => reject(request.error);
-			request.onsuccess = () => {
-				this.db = request.result;
-				this._version = this.db.version;
-				this._loadVersion()
-					.then(() => resolve())
-					.catch(reject);
-			};
-			request.onupgradeneeded = event => {
-				const db = request.result;
-				this._version = db.version;
-				if (!db.objectStoreNames.contains("_meta")) {
-					db.createObjectStore("_meta");
-				}
-			};
-		});
+				request.onerror = () => reject(request.error);
+				request.onsuccess = () => {
+					this.db = request.result;
+					this._version = this.db.version;
+					this._loadVersion()
+						.then(() => resolve())
+						.catch(reject);
+				};
+				request.onupgradeneeded = event => {
+					const db = request.result;
+					this._version = db.version;
+					if (!db.objectStoreNames.contains("_meta")) {
+						db.createObjectStore("_meta");
+					}
+				};
+			});
+		} catch (err) {
+			throw new AdapterInitError(err, this._dbContext());
+		}
 	}
 
 	async _loadVersion() {
@@ -73,14 +100,18 @@ export class IndexedDBActions extends ActionsBase {
 	}
 
 	async close() {
-		if (this.db) {
+		if (!this.db) return;
+
+		try {
 			this.db.close();
 			this.db = null;
+		} catch (err) {
+			throw new AdapterCloseError(err, this._dbContext());
 		}
 	}
 
 	async _changeSchema(upgradeFn: (db: IDBDatabase) => void): Promise<void> {
-		if (!this.db) throw new Error("Database not initialized");
+		this._requireDb();
 
 		const newVersion = this.db.version + 1;
 		this.db.close();
@@ -110,7 +141,7 @@ export class IndexedDBActions extends ActionsBase {
 		collection: string,
 		mode: IDBTransactionMode,
 	): Promise<IDBObjectStore> {
-		if (!this.db) throw new Error("Database not initialized");
+		this._requireDb();
 		const tx = this.db.transaction(collection, mode);
 		return tx.objectStore(collection);
 	}
@@ -125,7 +156,7 @@ export class IndexedDBActions extends ActionsBase {
 	}
 
 	async ensureCollection(collection: string): Promise<boolean> {
-		if (!this.db) throw new Error("Database not initialized");
+		this._requireDb();
 		if (this.db.objectStoreNames.contains(collection)) return false;
 
 		await this._changeSchema(db => {
@@ -139,12 +170,12 @@ export class IndexedDBActions extends ActionsBase {
 	}
 
 	async issetCollection(collection: string): Promise<boolean> {
-		if (!this.db) throw new Error("Database not initialized");
+		this._requireDb();
 		return this.db.objectStoreNames.contains(collection);
 	}
 
 	async getCollections(): Promise<string[]> {
-		if (!this.db) throw new Error("Database not initialized");
+		this._requireDb();
 
 		const collections: string[] = [];
 		for (let i = 0; i < this.db.objectStoreNames.length; i++) {
@@ -157,7 +188,7 @@ export class IndexedDBActions extends ActionsBase {
 	}
 
 	async removeCollection(collection: string): Promise<boolean> {
-		if (!this.db) throw new Error("Database not initialized");
+		this._requireDb();
 		if (!this.db.objectStoreNames.contains(collection)) return false;
 
 		await this._changeSchema(db => {
@@ -169,7 +200,7 @@ export class IndexedDBActions extends ActionsBase {
 	}
 
 	async add(query: VQueryT.Add): Promise<DataInternal> {
-		if (!this.db) throw new Error("Database not initialized");
+		this._requireDb();
 
 		await this.ensureCollection(query.collection);
 		await addId(query, this);
@@ -184,8 +215,39 @@ export class IndexedDBActions extends ActionsBase {
 		});
 	}
 
+	async bulkAdd(query: VQueryT.BulkAdd): Promise<DataInternal[]> {
+		this._requireDb();
+
+		await this.ensureCollection(query.collection);
+		await addIdBulk(query, this);
+
+		const store = await this._getStore(query.collection, "readwrite");
+		const tx = store.transaction;
+
+		return new Promise<DataInternal[]>((resolve, reject) => {
+			const results: DataInternal[] = [];
+
+			tx.onerror = () => reject(new AdapterError(tx.error, this._dbContext()));
+			tx.onabort = () =>
+				reject(
+					new AdapterError(
+						tx.error ?? new Error("Transaction aborted"),
+						this._dbContext(),
+					),
+				);
+			tx.oncomplete = () => resolve(results);
+
+			for (const data of query.datas) {
+				const request = store.put(data);
+				request.onerror = () =>
+					reject(new AdapterError(request.error, this._dbContext()));
+				request.onsuccess = () => results.push(data as DataInternal);
+			}
+		});
+	}
+
 	async find(query: VQueryT.Find): Promise<DataInternal[]> {
-		if (!this.db) throw new Error("Database not initialized");
+		this._requireDb();
 		await this.ensureCollection(query.collection);
 
 		const entries = await this._getAllEntries(query.collection);
@@ -193,7 +255,7 @@ export class IndexedDBActions extends ActionsBase {
 	}
 
 	async findOne(query: VQueryT.FindOne): Promise<DataInternal | null> {
-		if (!this.db) throw new Error("Database not initialized");
+		this._requireDb();
 		await this.ensureCollection(query.collection);
 
 		const entries = await this._getAllEntries(query.collection);
@@ -205,7 +267,7 @@ export class IndexedDBActions extends ActionsBase {
 	}
 
 	async update(query: VQueryT.Update): Promise<DataInternal[]> {
-		if (!this.db) throw new Error("Database not initialized");
+		this._requireDb();
 		await this.ensureCollection(query.collection);
 
 		const store = await this._getStore(query.collection, "readwrite");
@@ -231,7 +293,7 @@ export class IndexedDBActions extends ActionsBase {
 	}
 
 	async updateOne(query: VQueryT.Update): Promise<DataInternal | null> {
-		if (!this.db) throw new Error("Database not initialized");
+		this._requireDb();
 		await this.ensureCollection(query.collection);
 
 		const store = await this._getStore(query.collection, "readwrite");
@@ -256,7 +318,7 @@ export class IndexedDBActions extends ActionsBase {
 	}
 
 	async remove(query: VQueryT.Remove): Promise<DataInternal[]> {
-		if (!this.db) throw new Error("Database not initialized");
+		this._requireDb();
 		await this.ensureCollection(query.collection);
 
 		const store = await this._getStore(query.collection, "readwrite");
@@ -281,7 +343,7 @@ export class IndexedDBActions extends ActionsBase {
 	}
 
 	async removeOne(query: VQueryT.Remove): Promise<DataInternal | null> {
-		if (!this.db) throw new Error("Database not initialized");
+		this._requireDb();
 		await this.ensureCollection(query.collection);
 
 		const store = await this._getStore(query.collection, "readwrite");
@@ -302,5 +364,37 @@ export class IndexedDBActions extends ActionsBase {
 			}
 		}
 		return null;
+	}
+
+	async count(query: VQueryT.Count): Promise<number> {
+		this._requireDb();
+		await this.ensureCollection(query.collection);
+
+		const entries = await this._getAllEntries(query.collection);
+		if (entries.length === 0) return 0;
+
+		const { search } = query;
+		if (
+			!search ||
+			(typeof search === "object" && Object.keys(search).length === 0)
+		) {
+			return entries.length;
+		}
+
+		let count = 0;
+		for (const entry of entries) {
+			if (
+				matchObj(
+					{
+						search,
+						collection: query.collection,
+					},
+					entry,
+				)
+			) {
+				count++;
+			}
+		}
+		return count;
 	}
 }

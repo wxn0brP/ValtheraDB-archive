@@ -22,7 +22,7 @@
         "build:smoke": "bun build ./public/smoke.ts --outdir ./public"
     },
     "dependencies": {
-        "@wxn0brp/db-core": "^0.12.2"
+        "@wxn0brp/db-core": "^0.12.10"
     },
     "devDependencies": {
         "@wxn0brp/biome": "*",
