@@ -5,21 +5,24 @@ import { RNAsyncStorageActions, AsyncStorageLike } from "./async-storage";
 
 export * from "./async-storage";
 
-export function createRNAsyncStorageValthera<
+export async function createRNAsyncStorageValthera<
 	T extends Record<string, Data[]>,
 >(
 	name: string,
 	storage: AsyncStorageLike,
 	data?: T,
-): ValtheraClass & { [K in keyof T]: Collection<T[K][number]> } {
+): Promise<ValtheraClass & { [K in keyof T]: Collection<T[K][number]> }> {
 	const db = new ValtheraClass({
 		adapter: new RNAsyncStorageActions(name, storage),
 	});
 	if (!data) return forgeTypedValthera(db) as any;
 
-	for (const collection of Object.keys(data)) {
-		(db.adapter as RNAsyncStorageActions)._write(collection, data[collection]);
-	}
+	const adapter = db.adapter as RNAsyncStorageActions;
+	await Promise.all(
+		Object.keys(data).map(collection =>
+			adapter._write(collection, data[collection]),
+		),
+	);
 
 	return forgeTypedValthera(db) as any;
 }

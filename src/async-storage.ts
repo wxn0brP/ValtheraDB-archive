@@ -1,5 +1,8 @@
 import { CustomFileCpu } from "@wxn0brp/db-core";
 import { CustomActionsBase } from "@wxn0brp/db-core/base/custom";
+import { addIdBulk } from "@wxn0brp/db-core/helpers/addId";
+import { VQueryT } from "@wxn0brp/db-core/types/query";
+import { hasFieldsAdvanced } from "@wxn0brp/db-core/utils/hasFieldsAdvanced";
 import { version } from "./version";
 
 export interface AsyncStorageLike {
@@ -11,6 +14,11 @@ export interface AsyncStorageLike {
 
 export class RNAsyncStorageActions extends CustomActionsBase {
 	version = version;
+	capabilities = {
+		transactions: false,
+		indexes: false,
+		persistent: true,
+	};
 
 	constructor(
 		public name: string,
@@ -64,5 +72,28 @@ export class RNAsyncStorageActions extends CustomActionsBase {
 	async removeCollection(collection: string) {
 		await this._storage.removeItem(this._getPath(collection));
 		return true;
+	}
+
+	async bulkAdd(config: VQueryT.BulkAdd) {
+		await this.ensureCollection(config.collection);
+		await addIdBulk(config, this);
+
+		const data = await this._read(config.collection);
+		data.push(...config.datas);
+		await this._write(config.collection, data);
+
+		return config.datas;
+	}
+
+	async count(config: VQueryT.Count): Promise<number> {
+		const data = await this._read(config.collection);
+		if (data.length === 0) return 0;
+
+		const { search } = config;
+		if (!search || Object.keys(search).length === 0) return data.length;
+
+		let count = 0;
+		for (const item of data) if (hasFieldsAdvanced(item, search)) count++;
+		return count;
 	}
 }
