@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.120.4](https://github.com/wxn0brP/ValtheraDB-storage-mongodb/compare/v0.120.3...v0.120.4) (2026-10-15)
+
+
+### Features
+
+* DYNAMIC.def ([8131e80](https://github.com/wxn0brP/ValtheraDB-storage-mongodb/commit/8131e80ea227c30413bbc7d09ddba93e13ece473))
+* split code & bulkAdd support ([c11f0d4](https://github.com/wxn0brP/ValtheraDB-storage-mongodb/commit/c11f0d4fa35b7773a53bd1f552d057248316e1c6))
+* update to new core ([dcf018f](https://github.com/wxn0brP/ValtheraDB-storage-mongodb/commit/dcf018f14cc34bc9316a0c56b3cd4d1f5663213d))
+
 ### [0.120.3](https://github.com/wxn0brP/ValtheraDB-storage-mongodb/compare/v0.120.2...v0.120.3) (2026-10-05)
 
 ### [0.120.2](https://github.com/wxn0brP/ValtheraDB-storage-mongodb/compare/v0.120.2-alpha.0...v0.120.2) (2026-09-27)
