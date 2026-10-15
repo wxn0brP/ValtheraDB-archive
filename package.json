@@ -28,8 +28,8 @@
         "typescript": "^7"
     },
     "dependencies": {
-        "@wxn0brp/db-core": "^0.12.4",
-        "@wxn0brp/db-storage-dir": "^0.120.3"
+        "@wxn0brp/db-core": "^0.12.10",
+        "@wxn0brp/db-storage-dir": "^0.120.6"
     },
     "files": [
         "dist"

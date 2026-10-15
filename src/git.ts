@@ -1,3 +1,4 @@
+import { AdapterError, AdapterInitError } from "@wxn0brp/db-core/errors";
 import { execFileSync } from "child_process";
 import { mkdir, stat } from "fs/promises";
 import { join } from "path";
@@ -25,16 +26,27 @@ export class GitManager {
 		return this._opts.url;
 	}
 
+	_exec(args: string[]) {
+		try {
+			return execFileSync("git", args, {
+				cwd: this._dir,
+				encoding: "utf8",
+				stdio: [
+					"pipe",
+					"pipe",
+					"pipe",
+				],
+			});
+		} catch (err) {
+			throw new AdapterError(err, {
+				op: args[0],
+				branch: this._opts.branch,
+			});
+		}
+	}
+
 	_run(args: string[]) {
-		execFileSync("git", args, {
-			cwd: this._dir,
-			encoding: "utf8",
-			stdio: [
-				"pipe",
-				"pipe",
-				"pipe",
-			],
-		});
+		this._exec(args);
 	}
 
 	async clone() {
@@ -51,38 +63,34 @@ export class GitManager {
 
 		const url = this._getAuthUrl();
 		try {
-			execFileSync(
-				"git",
-				[
-					"clone",
-					"--branch",
-					this._opts.branch,
-					"--single-branch",
-					url,
-					".",
-				],
-				{
-					cwd: this._dir,
-					encoding: "utf8",
-					stdio: [
-						"pipe",
-						"pipe",
-						"pipe",
-					],
-				},
-			);
-		} catch (err) {
 			this._run([
-				"init",
-				"-b",
+				"clone",
+				"--branch",
 				this._opts.branch,
-			]);
-			this._run([
-				"remote",
-				"add",
-				"origin",
+				"--single-branch",
 				url,
+				".",
 			]);
+		} catch {
+			try {
+				this._run([
+					"init",
+					"-b",
+					this._opts.branch,
+				]);
+				this._run([
+					"remote",
+					"add",
+					"origin",
+					url,
+				]);
+			} catch (initErr) {
+				throw new AdapterInitError(initErr, {
+					dir: this._dir,
+					url: this._opts.url,
+					branch: this._opts.branch,
+				});
+			}
 		}
 	}
 
@@ -147,16 +155,10 @@ export class GitManager {
 	}
 
 	hasChanged() {
-		const stdout = execFileSync(
-			"git",
-			[
-				"status",
-				"--porcelain",
-			],
-			{
-				cwd: this._dir,
-			},
-		);
+		const stdout = this._exec([
+			"status",
+			"--porcelain",
+		]);
 		return stdout.length > 0;
 	}
 }
