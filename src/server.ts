@@ -1,4 +1,5 @@
 import { ValtheraCreate } from "@wxn0brp/db";
+import { isValtheraError } from "@wxn0brp/db-core/errors";
 import { VQuery } from "@wxn0brp/db-core/types/query";
 import FalconFrame from "@wxn0brp/falcon-frame";
 import { deserializeFunctions } from "@wxn0brp/wts-run-fn";
@@ -49,9 +50,25 @@ app.post("/db/:type", async (req, res) => {
 	} catch (e: any) {
 		console.error(e);
 		res.status(500);
+		const payload: Record<string, any> = isValtheraError(e) ? e.toJSON() : {};
 		return {
 			err: true,
-			msg: e.message,
+			msg: e?.message,
+			...(payload.code
+				? {
+						code: payload.code,
+					}
+				: {}),
+			...(payload.suggestion
+				? {
+						suggestion: payload.suggestion,
+					}
+				: {}),
+			...(payload.context
+				? {
+						context: payload.context,
+					}
+				: {}),
 		};
 	}
 });

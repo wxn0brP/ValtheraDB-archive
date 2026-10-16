@@ -1,6 +1,6 @@
 {
     "name": "@wxn0brp/db-cli",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "main": "src/index.ts",
     "author": "wxn0brP",
     "license": "MIT",
@@ -18,10 +18,10 @@
         "typescript": "^7"
     },
     "dependencies": {
-        "@wxn0brp/db": "^0.120.1",
-        "@wxn0brp/db-core": "^0.12.4",
-        "@wxn0brp/db-resolver": "^0.120.1",
-        "@wxn0brp/falcon-frame": "^0.9.3",
+        "@wxn0brp/db": "^0.120.4",
+        "@wxn0brp/db-core": "^0.12.10",
+        "@wxn0brp/db-resolver": "^0.120.4",
+        "@wxn0brp/falcon-frame": "^0.9.7",
         "@wxn0brp/wts-run-fn": "github:wxn0brP/ts-shared#dist-run-fn",
         "commander": "^15.0.0"
     }

@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { ValtheraClass } from "@wxn0brp/db-core";
+import { isValtheraError } from "@wxn0brp/db-core/errors";
 import { Command } from "commander";
 import { existsSync, readFileSync } from "fs";
 import { collectionOperations, operations } from "./operations";
@@ -12,6 +13,30 @@ const program = new Command();
 const v = JSON.parse(
 	readFileSync(import.meta.dirname + "/../package.json", "utf-8"),
 ).version;
+
+function printResult(result: any, json?: boolean) {
+	console.log(json ? JSON.stringify(result) : result);
+}
+
+function fail(err: any, json?: boolean) {
+	const payload: Record<string, any> = isValtheraError(err)
+		? err.toJSON()
+		: {
+				message: err?.message ?? String(err),
+			};
+
+	if (json) {
+		console.error(JSON.stringify(payload));
+	} else {
+		console.error(
+			payload.code ? `[${payload.code}] ${payload.message}` : payload.message,
+		);
+		if (payload.suggestion) console.error("Suggestion:", payload.suggestion);
+		if (payload.context) console.error("Context:", payload.context);
+	}
+
+	process.exitCode = 1;
+}
 
 interface Cfg {
 	dbs: Record<string, Opts>;
@@ -100,26 +125,29 @@ operations.forEach(operation => {
 			const db = await getValthera(options as any);
 			const name = operation.name.split(" ")[0];
 
-			if (argsRaw.length >= 2) {
-				const search = argsRaw[1] as string;
-				if (search.startsWith("=")) {
-					const [, id, data] = search.split("=");
-					const searchData = {
+			try {
+				// commander appends the options object and the Command instance
+				const raw = argsRaw.slice(0, -2);
+
+				if (typeof raw[1] === "string" && raw[1].startsWith("=")) {
+					const [, id, data] = raw[1].split("=");
+					raw[1] = {
 						[id]: data,
 					};
-					argsRaw[1] = searchData;
 				}
+
+				const args = raw.map((data, i) => {
+					const type = operation.args[i] || "string";
+					return parseData(data, type);
+				});
+
+				const collection = args.shift();
+
+				const result = await db.c(collection)[name](...args);
+				printResult(result, options.json);
+			} catch (err) {
+				fail(err, options.json);
 			}
-
-			const args = argsRaw.map((data, i) => {
-				const type = operation.args[i] || "string";
-				return parseData(data, type);
-			});
-
-			const collection = args.shift();
-
-			const result = await db.c(collection)[name](...args);
-			console.log(options.json ? JSON.stringify(result) : result);
 		});
 });
 
@@ -133,10 +161,14 @@ collectionOperations.forEach(operation => {
 			const db = await getValthera(options as any);
 			const name = operation.name.split(" ")[0];
 
-			const collection = argsRaw.shift();
+			try {
+				const collection = argsRaw.shift();
 
-			const result = await db[name](collection);
-			console.log(options.json ? JSON.stringify(result) : result);
+				const result = await db[name](collection);
+				printResult(result, options.json);
+			} catch (err) {
+				fail(err, options.json);
+			}
 		});
 });
 
@@ -152,9 +184,13 @@ program
 program.on("command:*", async operands => {
 	console.log(`Unrecognized command: ${operands.join(" ")}`);
 	const options = program.opts();
-	const db = await getValthera(options as any);
-	const result = await db.c(operands[1])[operands[0]](...operands.slice(2));
-	console.log(result);
+	try {
+		const db = await getValthera(options as any);
+		const result = await db.c(operands[1])[operands[0]](...operands.slice(2));
+		printResult(result, options.json);
+	} catch (err) {
+		fail(err, options.json);
+	}
 });
 
 program.parse();

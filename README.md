@@ -59,6 +59,32 @@ Example:
 vdb updateOne user "{id:123}" "{name: 'John'}"
 ```
 
+### Available Operations
+
+| Command | Description |
+|---|---|
+| `add <collection> <data> [id_gen]` | Add a document to a collection |
+| `bulkAdd <collection> <data> [id_gen]` | Add multiple documents to a collection |
+| `count <collection> [search]` | Count documents in a collection |
+| `find <collection> <search> [options] [findOpts] [context]` | Find documents in a collection |
+| `findOne <collection> <search> [findOpts] [context]` | Find one document in a collection |
+| `update <collection> <search> <updater> [context]` | Update documents in a collection |
+| `updateOne <collection> <search> <updater> [context]` | Update one document in a collection |
+| `updateOneOrAdd <collection> <search> <updater> [add_arg]` | Update one document or add it if missing |
+| `remove <collection> <search> [context]` | Remove documents in a collection |
+| `removeOne <collection> <search> [context]` | Remove one document in a collection |
+| `toggleOne <collection> <data>` | Remove one document or add it if missing |
+| `createIndex <collection> <fields> [opts]` | Create an index on a collection |
+| `removeIndex <collection> <fields>` | Remove an index from a collection |
+| `getCollections` | Get all collections |
+| `capabilities` | Describe what the underlying adapter supports |
+| `ensureCollection <collection>` | Ensure a collection exists |
+| `issetCollection <collection>` | Check if a collection exists |
+| `removeCollection <collection>` | Remove a collection |
+
+Errors reported by the database are printed with their error code, suggestion and
+context. Pass `--json` to get the raw (JSON) result or error payload.
+
 ## License
 
 MIT License
