@@ -22,15 +22,20 @@ When the primary server is down, writes are queued on a catchup node in `__squir
 
 ### Full Scan
 
-When no `_id` is present and `SQUIRREL_ALLOW_FULL_SCAN=true`, Squirrel broadcasts the operation to all servers.
+When no `_id` is present and `SQUIRREL_ALLOW_FULL_SCAN=true`, Squirrel broadcasts the operation to all servers. `count` returns the sum of the counts reported by every reachable server.
+
+### Bulk Add
+
+`bulkAdd` is routed per entry: each document is written to the server (or replica set) owning its `_id`, queueing catchup writes for down replicas. Entries without an `_id` (only with `id_gen: false`) are broadcast to all servers. The response contains every written document.
 
 ### Collection Operations
 
-Collection operations (`getCollections`, `ensureCollection`, `removeCollection`, `issetCollection`) are special cases that operate on collections rather than documents. They never have an `_id` and always require full scan.
+Collection operations (`getCollections`, `capabilities`, `ensureCollection`, `removeCollection`, `issetCollection`) are special cases that operate on collections rather than documents. They never have an `_id` and always require full scan.
 
 | Operation | Behavior |
 |-----------|----------|
 | `getCollections` | Aggregates collection names from all servers, returns deduplicated list |
+| `capabilities` | Intersects adapter capabilities of all reachable servers |
 | `ensureCollection` | Creates the collection on all servers |
 | `removeCollection` | Removes the collection from all servers |
 | `issetCollection` | Returns `true` if the collection exists on any server |

@@ -13,7 +13,7 @@ export async function replicationOther(
 	op: string,
 	id: string,
 	data: VQuery<Data, false>,
-) {
+): Promise<any> {
 	logger.debug(
 		"REPLICATION",
 		"[V-SQR-13-01] replicationOther, op:",

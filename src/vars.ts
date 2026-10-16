@@ -7,9 +7,15 @@ export const COLLECTIONS = {
 
 export const COLLECTION_OPS = new Set([
 	"getCollections",
+	"capabilities",
 	"ensureCollection",
 	"issetCollection",
 	"removeCollection",
+]);
+
+export const NO_QUERY_OPS = new Set([
+	"getCollections",
+	"capabilities",
 ]);
 
 export const TIMEOUTS = {

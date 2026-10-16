@@ -1,3 +1,4 @@
+import { AdapterInitError } from "@wxn0brp/db-core/errors";
 import { convertIdToUnix } from "@wxn0brp/db-core/utils/id";
 import { logger } from "./logger";
 import { Squirrel } from "./squirrel";
@@ -17,7 +18,8 @@ export class TopologyManager {
 	constructor(public squirrel: Squirrel) {}
 
 	async init(seeds: string[]) {
-		if (seeds.length === 0) throw new Error("[V-SQR-01-01] No seeds provided");
+		if (seeds.length === 0)
+			throw new AdapterInitError(new Error("[V-SQR-01-01] No seeds provided"));
 
 		let failed = 0;
 		for (const seed of seeds) {
@@ -56,10 +58,12 @@ export class TopologyManager {
 		}
 
 		if (failed === seeds.length)
-			throw new Error("[V-SQR-01-10] No servers available");
+			throw new AdapterInitError(
+				new Error("[V-SQR-01-10] No servers available"),
+			);
 
 		if (this.servers.size === 0)
-			throw new Error("[V-SQR-01-11] No servers found");
+			throw new AdapterInitError(new Error("[V-SQR-01-11] No servers found"));
 
 		if (this.epochs.length) this.epochs.sort((a, b) => a.start - b.start);
 		else {
@@ -278,7 +282,8 @@ export class TopologyManager {
 		const servers = [
 			...this.servers.keys(),
 		];
-		if (servers.length === 0) throw new Error("[V-SQR-05-02] No servers found");
+		if (servers.length === 0)
+			throw new AdapterInitError(new Error("[V-SQR-05-02] No servers found"));
 		servers.sort((a, b) => a.localeCompare(b));
 		logger.info("TOPOLOGY", "[V-SQR-05-03] Servers in new epoch:", servers);
 

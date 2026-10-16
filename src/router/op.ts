@@ -1,10 +1,13 @@
+import { isValtheraError } from "@wxn0brp/db-core/errors";
 import type { VQuery } from "@wxn0brp/db-core/types/query";
 import { FFRequest, FFResponse } from "@wxn0brp/falcon-frame";
 import { logger } from "../logger";
+import { bulkAddOp } from "../replication/bulkAdd";
+import { replicationCount } from "../replication/count";
 import { replicationFind, replicationFindOne } from "../replication/find";
 import { replicationOther } from "../replication/other";
 import { Squirrel } from "../squirrel";
-import { COLLECTION_OPS, HTTP_STATUS } from "../vars";
+import { COLLECTION_OPS, HTTP_STATUS, NO_QUERY_OPS } from "../vars";
 import { useCatchupServer } from "./catchup";
 import { fullScanCollectionOp, fullScanReq } from "./fullScan";
 
@@ -14,8 +17,23 @@ function getQuery(req: FFRequest): VQuery {
 
 export function registerDbOp(squirrel: Squirrel) {
 	const createHandler =
-		(op: (req: FFRequest) => string) => (req: FFRequest, res: FFResponse) =>
-			useDbOp(squirrel, req, res, getQuery(req), op(req));
+		(op: (req: FFRequest) => string) =>
+		async (req: FFRequest, res: FFResponse) => {
+			try {
+				return await useDbOp(squirrel, req, res, getQuery(req), op(req));
+			} catch (err) {
+				const body: Record<string, unknown> = {
+					err: true,
+					msg: (err as any)?.message ?? String(err),
+				};
+				if (isValtheraError(err)) {
+					body.code = err.code;
+					if (err.suggestion) body.suggestion = err.suggestion;
+					if (err.context) body.context = err.context;
+				}
+				return res.status(500).json(body);
+			}
+		};
 
 	const { app } = squirrel;
 
@@ -39,12 +57,19 @@ export async function useDbOp(
 	res: FFResponse,
 	data: VQuery,
 	op: string,
-) {
+): Promise<any> {
 	if (!op)
 		return res.json({
 			err: true,
 			msg: "No op specified",
 		});
+
+	if (NO_QUERY_OPS.has(op)) {
+		return {
+			err: false,
+			result: await fullScanCollectionOp(squirrel, data ?? {}, op),
+		};
+	}
 
 	if (!data || typeof data !== "object" || Array.isArray(data))
 		return res.json({
@@ -57,6 +82,13 @@ export async function useDbOp(
 			err: true,
 			msg: "Search function is not supported",
 		});
+
+	if (op === "bulkAdd") {
+		return {
+			err: false,
+			result: await bulkAddOp(squirrel, data as any),
+		};
+	}
 
 	if (COLLECTION_OPS.has(op)) {
 		const res = await fullScanCollectionOp(squirrel, data, op);
@@ -80,6 +112,11 @@ export async function useDbOp(
 				return {
 					err: false,
 					result: await replicationFind(squirrel, id, data as any),
+				};
+			case "count":
+				return {
+					err: false,
+					result: await replicationCount(squirrel, id, data as any),
 				};
 			default:
 				return {

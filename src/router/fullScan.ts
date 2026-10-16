@@ -65,6 +65,8 @@ export async function fullScanReq(
 		findResult.length,
 	);
 
+	if (op === "count") return findResult.reduce((a, b) => a + b, 0);
+
 	const responseData =
 		op === "find" ? findResult : findResult[0] ? findResult[0] : null;
 
@@ -164,6 +166,43 @@ export async function fullScanCollectionOp(
 				if (exists) return true;
 			}
 			return false;
+		}
+
+		case "capabilities": {
+			let result: {
+				transactions: boolean;
+				indexes: boolean;
+				persistent: boolean;
+			} | null = null;
+			for (const [serverId, server] of servers) {
+				const isUp = await squirrel.topology.isServerUp(server.host);
+				if (!isUp) {
+					logger.warn(
+						"FULLSCAN",
+						"[V-SQR-07-12] Server down, skipping:",
+						serverId,
+					);
+					continue;
+				}
+				const client = squirrel.getClient(server.host);
+				const caps = await client.capabilities();
+				if (!caps) continue;
+				result ??= {
+					transactions: true,
+					indexes: true,
+					persistent: true,
+				};
+				result.transactions &&= caps.transactions;
+				result.indexes &&= caps.indexes;
+				result.persistent &&= caps.persistent;
+			}
+			return (
+				result ?? {
+					transactions: false,
+					indexes: false,
+					persistent: false,
+				}
+			);
 		}
 
 		default:

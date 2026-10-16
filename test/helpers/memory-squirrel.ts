@@ -38,7 +38,7 @@ export interface MemoryCluster {
 
 export function createMemoryCluster(
 	ids: string[],
-	config: SquirrelConfig = {},
+	config: Partial<SquirrelConfig> = {},
 ): MemoryCluster {
 	const servers = new Map<string, MemoryServer>();
 
@@ -63,6 +63,7 @@ export function createMemoryCluster(
 			allowFullScan: true,
 			replicationEnabled: false,
 			replicationFactor: 3,
+			autoSyncOnStartup: false,
 			...config,
 		},
 		clients: new Map<string, ValtheraCompatible>(),
