@@ -27,7 +27,7 @@ export async function createBinValthera(
 }
 
 export const DYNAMIC = {
-	async bin(path: string, opts: Partial<Options> = {}) {
+	async def(path: string, opts: Partial<Options> = {}) {
 		const adapter = new BinAdapter(path, opts);
 		await adapter.init();
 		return adapter;
