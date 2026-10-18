@@ -1,0 +1,54 @@
+{
+    "name": "@wxn0brp/db-storage-postgresql",
+    "version": "0.0.1",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "description": "A PostgreSQL storage adapter for the ValtheraDB database library",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/wxn0brP/ValtheraDB-storage-postgresql.git"
+    },
+    "homepage": "https://github.com/wxn0brP/ValtheraDB-storage-postgresql",
+    "author": "wxn0brP",
+    "license": "MIT",
+    "type": "module",
+    "keywords": [
+        "valthera",
+        "valtheradb",
+        "vdb-adapter",
+        "postgres",
+        "postgresql"
+    ],
+    "scripts": {
+        "build": "tsc && tsc-alias"
+    },
+    "dependencies": {
+        "@wxn0brp/db-core": "^0.12.12"
+    },
+    "devDependencies": {
+        "@types/bun": "*",
+        "@types/pg": "^8.23.1",
+        "@wxn0brp/biome": "*",
+        "pg": "^8.23.1",
+        "tsc-alias": "^1",
+        "typescript": "^7"
+    },
+    "peerDependencies": {
+        "pg": "^8.23.1"
+    },
+    "files": [
+        "dist"
+    ],
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js",
+            "default": "./dist/index.js"
+        },
+        "./*": {
+            "types": "./dist/*.d.ts",
+            "import": "./dist/*.js",
+            "default": "./dist/*.js"
+        }
+    }
+}
