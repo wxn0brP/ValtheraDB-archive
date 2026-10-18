@@ -20,10 +20,6 @@ export const DYNAMIC = {
 		if (typeof Bun !== "undefined") return DYNAMIC.bun(file, keys, opts);
 		return DYNAMIC.node(file, keys, opts);
 	},
-	sqlite(file: string, keys: Record<string, string> = {}, opts?: any) {
-		if (typeof Bun !== "undefined") return DYNAMIC.bun(file, keys, opts);
-		return DYNAMIC.node(file, keys, opts);
-	},
 	async bun(
 		file: string,
 		keys: Record<string, string> = {},
