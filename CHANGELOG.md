@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.120.5](https://github.com/wxn0brP/ValtheraDB-resolver/compare/v0.120.4...v0.120.5) (2026-10-18)
+
+
+### Features
+
+* improve ([e920288](https://github.com/wxn0brP/ValtheraDB-resolver/commit/e920288efb54bae5d6cc8b9f3f9452175f107aea))
+
 ### [0.120.4](https://github.com/wxn0brP/ValtheraDB-resolver/compare/v0.120.3...v0.120.4) (2026-10-15)
 
 ### [0.120.3](https://github.com/wxn0brP/ValtheraDB-resolver/compare/v0.120.2...v0.120.3) (2026-10-12)
