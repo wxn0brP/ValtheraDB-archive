@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.120.2](https://github.com/wxn0brP/ValtheraDB-storage-bin/compare/v0.120.1...v0.120.2) (2026-10-18)
+
+
+### Features
+
+* adapter version metadata ([60f9b10](https://github.com/wxn0brP/ValtheraDB-storage-bin/commit/60f9b101b26a52d7d31f10561e30147dfb582e50))
+* update DYNAMIC ([59161fb](https://github.com/wxn0brP/ValtheraDB-storage-bin/commit/59161fb259f343090b118a7c3bcbc9162ff09ed1))
+
 ### [0.120.1](https://github.com/wxn0brP/ValtheraDB-storage-bin/compare/v0.120.0...v0.120.1) (2026-10-05)
 
 
