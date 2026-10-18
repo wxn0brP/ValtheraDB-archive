@@ -5,12 +5,12 @@ import { createAdapter } from "./load";
 import { Opts, ValtheraScope } from "./types";
 
 function createAdapterBuilder(pkgName: string, scopeOpts: Opts) {
-	const buildDb = (variant: string, ...args: any[]) => {
+	const buildDb = (variant: string | undefined, ...args: any[]) => {
 		const adapterOpts = args.length > 0 ? args : (scopeOpts.opts ?? []);
 
 		const finalOpts: Opts = {
 			...scopeOpts,
-			force: `${pkgName}:${variant}`,
+			def: variant ? `${pkgName}:${variant}` : pkgName,
 			opts: adapterOpts,
 		};
 
@@ -22,7 +22,7 @@ function createAdapterBuilder(pkgName: string, scopeOpts: Opts) {
 	};
 
 	const defaultExecute = (...args: any[]) => {
-		return buildDb(pkgName, ...args);
+		return buildDb(undefined, ...args);
 	};
 
 	return new Proxy(defaultExecute, {

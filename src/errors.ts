@@ -34,6 +34,21 @@ export class VariantNotFoundError extends ResolverError {
 	}
 }
 
+export class MissingDefaultError extends ResolverError {
+	constructor(pkg: string, available?: string[]) {
+		const suggestion =
+			"Add `export const DYNAMIC = { def: ... }` to the adapter";
+		super(
+			`Adapter "${pkg}" has no default factory`,
+			"MISSING_DEFAULT",
+			available?.length
+				? `${suggestion}\nAvailable exports: ${available.join(", ")}`
+				: suggestion,
+		);
+		this.name = "MissingDefaultError";
+	}
+}
+
 export class InvalidOptsError extends ResolverError {
 	constructor(field: string, reason: string) {
 		super(`Invalid option "${field}": ${reason}`, "INVALID_OPTS");

@@ -2,6 +2,7 @@ import { createRequire } from "module";
 import { pathToFileURL } from "url";
 import {
 	AdapterNotFoundError,
+	MissingDefaultError,
 	MissingDynamicError,
 	VariantNotFoundError,
 } from "./errors";
@@ -58,8 +59,11 @@ export async function createAdapter(opts: Opts, retry = false) {
 	const mod = await loadAdapter(pkgName, pkgPath);
 
 	const factory = variant ? mod[variant] : (mod.def ?? mod[pkg]);
-	if (!factory)
-		throw new VariantNotFoundError(pkgName, variant ?? pkg, Object.keys(mod));
+	if (!factory) {
+		if (variant)
+			throw new VariantNotFoundError(pkgName, variant, Object.keys(mod));
+		throw new MissingDefaultError(pkgName, Object.keys(mod));
+	}
 
 	return await factory(...dbOpts);
 }
