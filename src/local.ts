@@ -9,6 +9,22 @@ import { type BenchResult } from "./run";
 import { benchmarkSmall } from "./small";
 import { loadCustomSetup, writeResults } from "./utils";
 
+function printHelp() {
+	console.log(`Usage: valthera-bench [adapter] [options]
+
+Benchmark a ValtheraDB adapter.
+
+Arguments:
+  adapter               Path to adapter module
+                        (default: ./valthera-e2e/index.ts)
+
+Options:
+  -s, --small           Run only the small collection benchmark
+  -j, --json            Save results as JSON
+  -f, --jsonFile <path> JSON output file (default: results.json)
+  -h, --help            Show this help`);
+}
+
 function formatTime(timeMs: number) {
 	if (timeMs < 1) return `${(timeMs * 1000).toFixed(2)}μs`;
 	if (timeMs < 1000) return `${timeMs.toFixed(2)}ms`;
@@ -106,9 +122,18 @@ const { values, positionals } = parseArgs({
 			type: "string",
 			short: "f",
 		},
+		help: {
+			type: "boolean",
+			short: "h",
+		},
 	},
 	allowPositionals: true,
 });
+
+if (values.help) {
+	printHelp();
+	process.exit(0);
+}
 
 const smallOnly = values.small ?? false;
 const jsonOutput = values.json || values.jsonFile;
