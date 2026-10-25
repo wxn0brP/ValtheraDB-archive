@@ -1,0 +1,63 @@
+{
+	"name": "@wxn0brp/db-storage-mariadb",
+	"version": "0.0.1",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"description": "A MariaDB storage adapter for the ValtheraDB database library",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/wxn0brP/ValtheraDB-storage-mariadb.git"
+	},
+	"homepage": "https://github.com/wxn0brP/ValtheraDB-storage-mariadb",
+	"author": "wxn0brP",
+	"license": "MIT",
+	"type": "module",
+	"keywords": [
+		"valthera",
+		"valtheradb",
+		"vdb-adapter",
+		"mariadb",
+		"mysql"
+	],
+	"scripts": {
+		"build": "tsc && tsc-alias"
+	},
+	"dependencies": {
+		"@wxn0brp/db-core": "^0.12.13"
+	},
+	"devDependencies": {
+		"@types/bun": "*",
+		"@wxn0brp/biome": "*",
+		"mariadb": "^3.5.4",
+		"mysql2": "^3.24.6",
+		"tsc-alias": "^1",
+		"typescript": "^7"
+	},
+	"peerDependencies": {
+		"mariadb": "^3.5.4",
+		"mysql2": "^3.24.6"
+	},
+	"peerDependenciesMeta": {
+		"mariadb": {
+			"optional": true
+		},
+		"mysql2": {
+			"optional": true
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./*": {
+			"types": "./dist/*.d.ts",
+			"import": "./dist/*.js",
+			"default": "./dist/*.js"
+		}
+	}
+}

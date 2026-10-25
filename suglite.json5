@@ -1,0 +1,6 @@
+{
+    cmd: "tsc --noEmit && bun run build && bun run start",
+    watch: [
+        "src"
+    ]
+}
