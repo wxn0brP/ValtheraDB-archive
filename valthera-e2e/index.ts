@@ -1,8 +1,5 @@
-import {
-	MariaDBConnection,
-	MariaDBDriver,
-	MariaDBValthera,
-} from "../src/index.ts";
+import { MariaDBValthera } from "../src/actions";
+import { MariaDBConnection, MariaDBDriver } from "../src/types";
 
 const MARIADB_URL =
 	process.env.MARIADB_URL ?? "mariadb://root@localhost:3306/valthera_test";
