@@ -1,7 +1,10 @@
 import type { ValtheraClass } from "@wxn0brp/db-core/db/valthera";
+import { isValtheraError } from "@wxn0brp/db-core/errors";
 import { VQuery } from "@wxn0brp/db-core/types/query";
 import { FFResponse, Router } from "@wxn0brp/falcon-frame";
 import { deserializeFunctions } from "@wxn0brp/wts-run-fn";
+import { isAbsolute, resolve, sep } from "path";
+import { gitDir } from "./vars";
 
 export interface Query {
 	type: string;
@@ -14,11 +17,26 @@ export class Response {
 	result: any;
 	msg: string = "";
 	code?: number;
+	errorCode?: string;
+	suggestion?: string;
+	context?: Record<string, unknown>;
 
 	e(msg: string, code: number = 400) {
 		this.err = true;
 		this.msg = msg;
 		this.code = code;
+		return this;
+	}
+
+	error(err: unknown, code: number = 500) {
+		this.err = true;
+		this.msg = (err as any)?.message ?? String(err);
+		this.code = code;
+		if (isValtheraError(err)) {
+			this.errorCode = err.code;
+			this.suggestion = err.suggestion;
+			this.context = err.context;
+		}
 		return this;
 	}
 
@@ -35,6 +53,9 @@ export class Response {
 		if (this.code) res.status(this.code);
 		if (this.msg) response.msg = this.msg;
 		if (this.result !== undefined) response.result = this.result;
+		if (this.errorCode) response.code = this.errorCode;
+		if (this.suggestion) response.suggestion = this.suggestion;
+		if (this.context) response.context = this.context;
 		return res.json(response);
 	}
 }
@@ -55,10 +76,18 @@ const collectionOp = new Set([
 	"removeCollection",
 ]);
 
+const dbRoot = resolve(gitDir);
+
 function isPathSafe(collection: string) {
-	if (collection.startsWith("..")) return false;
-	if (collection.startsWith("/")) return false;
-	return true;
+	if (typeof collection !== "string" || !collection) return false;
+	if (collection.includes("\0") || collection.includes("\\")) return false;
+	if (isAbsolute(collection)) return false;
+	const segments = collection.split("/");
+	if (segments.some(segment => !segment || segment.startsWith(".")))
+		return false;
+	const resolved = resolve(dbRoot, collection);
+	if (resolved === dbRoot) return false;
+	return resolved.startsWith(dbRoot + sep);
 }
 
 export function createDbRouter(db: ValtheraClass) {
@@ -71,8 +100,7 @@ export function createDbRouter(db: ValtheraClass) {
 		if (!type) return res.e(Codes.TYPE_REQ);
 
 		try {
-			const dbAny = db as any;
-			if (!dbAny[type] || typeof dbAny[type] !== "function")
+			if (!db[type] || typeof db[type] !== "function")
 				return res.e(Codes.INVALID_TYPE);
 
 			if (type === "getCollections") {
@@ -81,26 +109,32 @@ export function createDbRouter(db: ValtheraClass) {
 				return res.r(collections);
 			}
 
+			if (type === "capabilities") {
+				const caps = await db.capabilities();
+				return res.r(caps);
+			}
+
 			if (!query) return res.e(Codes.QUERY_REQ);
 			if (typeof query !== "object") return res.e(Codes.QUERY_REQ_OBJ);
 			if (!query.collection) return res.e(Codes.COLLECTION_REQ);
 
 			const parsedVQuery = deserializeFunctions(query, keys || []) as VQuery;
 
-			if (!isPathSafe(query.collection)) return res.e(Codes.INVALID_COLLECTION);
+			if (!isPathSafe(query.collection) || !isPathSafe(parsedVQuery.collection))
+				return res.e(Codes.INVALID_COLLECTION);
 
 			console.log(`[OP] ${type} ${query.collection}`);
 
 			if (collectionOp.has(type)) {
-				const result = await dbAny[type](parsedVQuery.collection);
+				const result = await db[type](parsedVQuery.collection);
 				return res.r(result);
 			}
 
-			const result = await dbAny[type](parsedVQuery);
+			const result = await db[type](parsedVQuery);
 			return res.r(result);
 		} catch (err: any) {
 			console.error(`[DB] ${type} failed: ${err.message}`);
-			return res.e(err.message, 500);
+			return res.error(err);
 		}
 	}
 

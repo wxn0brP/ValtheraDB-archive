@@ -19,12 +19,12 @@
     "license": "MIT",
     "type": "module",
     "dependencies": {
-        "@wxn0brp/db": "^0.120.1",
-        "@wxn0brp/db-core": "^0.12.4",
-        "@wxn0brp/db-storage-dir": "^0.120.3",
-        "@wxn0brp/db-storage-git": "^0.0.5",
-        "@wxn0brp/falcon-frame": "^0.9.3",
-        "@wxn0brp/falcon-frame-plugin": "^0.0.6",
+        "@wxn0brp/db": "^0.120.6",
+        "@wxn0brp/db-core": "^0.12.14",
+        "@wxn0brp/db-storage-dir": "^0.120.8",
+        "@wxn0brp/db-storage-git": "^0.0.6",
+        "@wxn0brp/falcon-frame": "^0.9.9",
+        "@wxn0brp/falcon-frame-plugin": "^0.0.7",
         "@wxn0brp/wts-run-fn": "github:wxn0brp/ts-shared#dist-run-fn"
     },
     "devDependencies": {
