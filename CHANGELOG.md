@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.120.10](https://github.com/wxn0brP/ValtheraDB-client/compare/v0.120.9...v0.120.10) (2026-10-30)
+
+
+### Bug Fixes
+
+* regex support ([497c125](https://github.com/wxn0brP/ValtheraDB-client/commit/497c12596b46e384eaf3e35c8fd790e540319854))
+
 ### [0.120.9](https://github.com/wxn0brP/ValtheraDB-client/compare/v0.120.8...v0.120.9) (2026-10-18)
 
 

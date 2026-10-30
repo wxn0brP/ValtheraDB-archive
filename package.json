@@ -1,6 +1,6 @@
 {
     "name": "@wxn0brp/db-client",
-    "version": "0.120.9",
+    "version": "0.120.10",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "author": "wxn0brP",
