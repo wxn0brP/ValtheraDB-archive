@@ -20,10 +20,10 @@ try {
     $dbName = $params['db'] ?? null;
     $dbConfig = getDbConfig($dbName);
     db_init($dbConfig);
-    jsonResponse(getCollections($dbName));
+    $result = getCollections($dbName);
     db_close();
-
+    jsonResponse($result);
 } catch (Throwable $e) {
     error_log('[getCollections.php] ERROR: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
-    errorResponse($e->getMessage());
+    errorResponse($e);
 }

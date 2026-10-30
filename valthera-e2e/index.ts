@@ -18,48 +18,26 @@ export default async () => {
 
 	const actions = new RemoteActionsBase({
 		name: db,
-		url: url,
+		url,
 		auth: token,
 		headers: {
 			Authorization: `Bearer ${token}`,
 		},
 	});
 
-	actions._inited = false;
-
-	actions._request = async (type: string, query?: any) => {
-		const data = {
-			auth: token,
-			db: db,
-			query: query,
-			keys: [],
-		};
-		const targetUrl = `${url.replace(/\/$/, "")}/db/${type}.php`;
-		const res = await fetch(targetUrl, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${token}`,
-			},
-			body: JSON.stringify(data),
-		});
-		const json = await res.json();
-		if (json.err) throw new Error(json.msg);
-		return json.result;
+	actions.capabilities = {
+		transactions: false,
+		indexes: true,
+		persistent: true,
 	};
 
-	actions.getCollections = async () => {
-		return actions._request<string[]>("getCollections", {});
-	};
+	actions._inited = true;
 
-	actions.init = async () => {
-		for (const coll of TEST_COLLECTIONS) {
-			try {
-				await actions._request("removeCollection", coll);
-			} catch {}
-		}
-		actions._inited = true;
-	};
+	for (const coll of TEST_COLLECTIONS) {
+		try {
+			await actions.removeCollection(coll);
+		} catch {}
+	}
 
 	return actions;
 };

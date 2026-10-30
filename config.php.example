@@ -9,11 +9,14 @@
  * - If a custom configuration array is provided, its values override the defaults.
  */
 
- // Hardcoded authentication tokens with descriptive names
+ // Hardcoded authentication tokens with descriptive names.
+ // Each entry: 'token' => the secret value, 'dbs' => databases (keys of $databases)
+ // the token may use. 'dbs' => null grants access to every configured database.
+ // A missing or empty 'dbs' list denies all database access (secure default).
 $auth = [
-    'admin' => 'admin-token-123',
-    'app' => 'app-token-456',
-    'test' => 'test-token-789',
+    'admin' => ['token' => 'admin-token-123', 'dbs' => null],
+    'app' => ['token' => 'app-token-456', 'dbs' => []],
+    'test' => ['token' => 'test-token-789', 'dbs' => ['sakila']],
 ];
 
 // Default database configuration

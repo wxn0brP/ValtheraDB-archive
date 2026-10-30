@@ -16,19 +16,15 @@ function issetCollection(string $collection, string $dbName): bool
 // Handle direct API call
 try {
     $params = getRequestParams();
-    $collection = $params['collection'] ?? null;
-    $dbName = $params['db'] ?? null;
+    $collection = requireCollection($params, 'issetCollection');
+    $dbConfig = getDbConfig($params['db'] ?? null);
+    db_init($dbConfig);
 
-    if ($collection) {
-        $dbConfig = getDbConfig($dbName);
-        db_init($dbConfig);
-        jsonResponse(issetCollection($collection, $dbName));
-        db_close();
-    } else {
-        jsonErrResponse('Missing required parameter: collection', 400);
-    }
+    $result = issetCollection($collection, (string) $dbConfig['database']);
+    db_close();
+    jsonResponse($result);
 } catch (Throwable $e) {
     error_log('[issetCollection.php] ERROR: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
     error_log('[issetCollection.php] Stack trace: ' . $e->getTraceAsString());
-    errorResponse($e->getMessage());
+    errorResponse($e);
 }

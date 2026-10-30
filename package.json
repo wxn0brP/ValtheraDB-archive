@@ -1,6 +1,7 @@
 {
-  "dependencies": {},
-  "devDependencies": {
-    "@wxn0brp/db-client": "^0.112.1"
-  }
+    "dependencies": {},
+    "devDependencies": {
+        "@wxn0brp/db-client": "^0.120.9",
+        "@wxn0brp/db-core": "^0.12.14"
+    }
 }

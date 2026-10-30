@@ -1,9 +1,5 @@
 {
     "skip": {
-        "domains": [
-            "events",
-            "collection-api"
-        ],
         "tests": [
             "search-via-function",
             "update-via-function",

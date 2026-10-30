@@ -32,24 +32,32 @@ function safeFetchAll(string $sql, array $params): array
 
 function decodeDocFields(array $doc): array
 {
+    $result = [];
     foreach ($doc as $key => $value) {
-        if ($key === '_id') continue;
-        if (is_string($value)) {
+        if (is_string($key) && isUnsafeKey($key))
+            continue;
+
+        if ($key !== "_id" && is_string($value)) {
             $decoded = json_decode($value, true);
             if (json_last_error() === JSON_ERROR_NONE && (is_array($decoded) || is_object($decoded))) {
-                $doc[$key] = $decoded;
+                $value = $decoded;
             } elseif (is_numeric($value)) {
-                $doc[$key] = $value + 0;
+                $value = $value + 0;
             }
         }
+        $result[$key] = $value;
     }
-    return $doc;
+    return $result;
 }
 
 function encodeDocFields(array $doc): array
 {
     foreach ($doc as $key => $value) {
-        if ($key !== '_id' && (is_array($value) || is_object($value))) {
+        if (is_string($key) && isUnsafeKey($key)) {
+            unset($doc[$key]);
+            continue;
+        }
+        if ($key !== "_id" && (is_array($value) || is_object($value))) {
             $doc[$key] = json_encode($value, JSON_UNESCAPED_UNICODE);
         }
     }
@@ -63,7 +71,8 @@ function ensureColumns(string $collection, array $data): void
     $existingColumns = array_column($columns, 'Field');
 
     foreach (array_keys($data) as $key) {
-        if ($key === '_id') continue;
+        if (!is_string($key) || $key === '_id' || isUnsafeKey($key))
+            continue;
         if (!in_array($key, $existingColumns)) {
             $alterSql = 'ALTER TABLE ' . escapeIdentifier($collection)
                 . ' ADD COLUMN ' . escapeIdentifier($key) . ' TEXT';
@@ -72,21 +81,68 @@ function ensureColumns(string $collection, array $data): void
     }
 }
 
+function filterFieldNames($fields): ?array
+{
+    if ($fields === null)
+        return null;
+
+    $list = is_array($fields) ? $fields : [ $fields ];
+    $list = array_values(array_filter($list, fn($field) => isSafeField($field)));
+
+    return empty($list) ? null : $list;
+}
+
+function filterFieldMap($map): ?array
+{
+    if (!is_array($map) || empty($map))
+        return null;
+
+    $result = [];
+    foreach ($map as $outKey => $srcField) {
+        if (!is_string($outKey) || !isSafeField($outKey) || !isSafeField($srcField))
+            continue;
+        $result[$outKey] = $srcField;
+    }
+
+    return empty($result) ? null : $result;
+}
+
+function filterSortBy($sortBy)
+{
+    if ($sortBy === null || $sortBy === "random()")
+        return $sortBy;
+
+    if (is_array($sortBy)) {
+        $result = [];
+        foreach ($sortBy as $item) {
+            $field = is_array($item) ? ($item["field"] ?? null) : $item;
+            if (!isSafeField($field))
+                continue;
+            $result[] = $item;
+        }
+        return empty($result) ? null : $result;
+    }
+
+    return isSafeField($sortBy) ? $sortBy : null;
+}
+
 function add(array $params): array
 {
-    $collection = $params['collection'] ?? null;
+    $collection = requireCollection($params, 'add');
     $data = $params['data'] ?? [];
     $idGen = $params['id_gen'] ?? true;
     $dbName = $params['db'] ?? null;
 
-    if (!$collection)
-        throw new Exception("Missing required parameter: collection");
-
     if (empty($data))
-        throw new Exception("Missing required parameter: data");
+        throw new QueryValidationError("Missing required parameter: data", ['op' => 'add']);
 
     if (!is_array($data))
         $data = [$data];
+
+    if (array_is_list($data))
+        throw new QueryValidationError("Parameter data must be an object", ['op' => 'add']);
+
+    $data = filterUnsafeKeys($data);
 
     $hadId = isset($data['_id']);
     if (!$hadId)
@@ -123,27 +179,33 @@ function add(array $params): array
 
 function find(array $params): array
 {
-    $collection = $params['collection'] ?? null;
+    $collection = requireCollection($params, 'find');
     $search = $params['search'] ?? [];
     $dbName = $params['db'] ?? null;
     $dbFindOpts = $params['dbFindOpts'] ?? [];
     $findOpts = $params['findOpts'] ?? [];
 
-    if (!$collection)
-        throw new Exception("Missing required parameter: collection");
+    if (!is_array($search))
+        throw new QueryValidationError("Function-based search is not supported", ['op' => 'find']);
+
+    if (!is_array($dbFindOpts))
+        $dbFindOpts = [];
+
+    if (!is_array($findOpts))
+        $findOpts = [];
 
     $limit = $dbFindOpts['limit'] ?? null;
     $offset = $dbFindOpts['offset'] ?? null;
-    $sortBy = $dbFindOpts['sortBy'] ?? null;
+    $sortBy = filterSortBy($dbFindOpts['sortBy'] ?? null);
     $sortAsc = $dbFindOpts['sortAsc'] ?? null;
     $reverse = $dbFindOpts['reverse'] ?? false;
-    $groupBy = $dbFindOpts['groupBy'] ?? null;
-    $count = $dbFindOpts['count'] ?? null;
-    $min = $dbFindOpts['min'] ?? null;
-    $max = $dbFindOpts['max'] ?? null;
-    $avg = $dbFindOpts['avg'] ?? null;
-    $sum = $dbFindOpts['sum'] ?? null;
-    $distinct = $dbFindOpts['distinct'] ?? null;
+    $groupBy = filterFieldNames($dbFindOpts['groupBy'] ?? null);
+    $count = filterFieldMap($dbFindOpts['count'] ?? null);
+    $min = filterFieldMap($dbFindOpts['min'] ?? null);
+    $max = filterFieldMap($dbFindOpts['max'] ?? null);
+    $avg = filterFieldMap($dbFindOpts['avg'] ?? null);
+    $sum = filterFieldMap($dbFindOpts['sum'] ?? null);
+    $distinct = isSafeField($dbFindOpts['distinct'] ?? null) ? $dbFindOpts['distinct'] : null;
 
     if ($limit === INF || $limit === 'Infinity') $limit = null;
 
@@ -286,16 +348,19 @@ function find(array $params): array
 
 function update(array $params, bool $one = false): array
 {
-    $collection = $params['collection'] ?? null;
+    $collection = requireCollection($params, 'update');
     $search = $params['search'] ?? [];
     $updater = $params['updater'] ?? [];
     $dbName = $params['db'] ?? null;
 
-    if (!$collection)
-        throw new Exception("Missing required parameter: collection");
+    if (!is_array($search))
+        throw new QueryValidationError("Function-based search is not supported", ['op' => 'update']);
+
+    if (!is_array($updater))
+        throw new QueryValidationError("Function-based updater is not supported", ['op' => 'update']);
 
     if (empty($updater))
-        throw new Exception("Missing required parameter: updater");
+        throw new QueryValidationError("Missing required parameter: updater", ['op' => 'update']);
 
     $dbConfig = getDbConfig($dbName);
     db_init($dbConfig);
@@ -323,18 +388,21 @@ function update(array $params, bool $one = false): array
 
         $newData['_id'] = $doc['_id'];
 
-        foreach ($removedKeys as $key => $_) {
-            if (array_key_exists($key, $newData)) {
-                $newData[$key] = null;
-            }
-        }
-
         ensureColumns($collection, $newData);
 
         $keys = array_keys($newData);
-        $keyIdIndex = array_search('_id', $keys);
+        $keyIdIndex = array_search('_id', $keys, true);
         if ($keyIdIndex !== false) {
             unset($keys[$keyIdIndex]);
+        }
+
+        // Removed fields still exist as columns; write NULL so $exists:false and
+        // later reads agree with what the updater returned.
+        foreach (array_keys($removedKeys) as $key) {
+            if (array_key_exists($key, $newData))
+                continue;
+            $newData[$key] = null;
+            $keys[] = $key;
         }
 
         $encodedData = encodeDocFields($newData);
@@ -387,12 +455,12 @@ function updateOne(array $params): ?array
 
 function remove(array $params, bool $one = false): array
 {
-    $collection = $params['collection'] ?? null;
+    $collection = requireCollection($params, 'remove');
     $search = $params['search'] ?? [];
     $dbName = $params['db'] ?? null;
 
-    if (!$collection)
-        throw new Exception("Missing required parameter: collection");
+    if (!is_array($search))
+        throw new QueryValidationError("Function-based search is not supported", ['op' => 'remove']);
 
     $dbConfig = getDbConfig($dbName);
     db_init($dbConfig);
@@ -414,16 +482,18 @@ function remove(array $params, bool $one = false): array
         return [];
 
     $deleteSql = '';
+    $deleteParams = [];
     $deletedDocs = [];
 
     foreach ($matchingDocs as $doc) {
         $deleteSql = "DELETE FROM " . escapeIdentifier($collection) . " WHERE " . escapeIdentifier('_id') . " = ?";
-        db_execute($deleteSql, [$doc['_id']]);
+        $deleteParams = [$doc['_id']];
+        db_execute($deleteSql, $deleteParams);
         $deletedDocs[] = $doc;
     }
 
     db_close();
-    header('X-SQL-Query: ' . convertSqlAndParamsToString($deleteSql, [$doc['_id'] ?? null]));
+    header('X-SQL-Query: ' . convertSqlAndParamsToString($deleteSql, $deleteParams));
     return $deletedDocs;
 }
 

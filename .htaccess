@@ -1,4 +1,9 @@
 RewriteEngine On
+
+# POST /db/:db/:type -> db/:type.php with the database in ?db=
+RewriteRule ^db/([^/]+)/([^/]+)/?$ db/$2.php?db=$1 [L,QSA]
+
+# POST /db/:type -> db/:type.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}\.php -f

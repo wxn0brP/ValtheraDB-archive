@@ -13,5 +13,5 @@ try {
         jsonErrResponse('Missing required parameter: collection', 400);
     }
 } catch (Throwable $e) {
-    errorResponse($e->getMessage(), 400);
+    errorResponse($e);
 }

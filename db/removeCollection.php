@@ -11,21 +11,15 @@ function removeCollection(string $collection): bool
 
 try {
     $params = getRequestParams();
-    $collection = $params['collection'] ?? null;
-    $dbName = $params['db'] ?? null;
+    $collection = requireCollection($params, 'removeCollection');
+    $dbConfig = getDbConfig($params['db'] ?? null);
+    db_init($dbConfig);
 
-    if ($collection) {
-        $dbConfig = getDbConfig($dbName);
-        db_init($dbConfig);
-
-        $result = removeCollection($collection);
-        jsonResponse($result);
-        db_close();
-    } else {
-        jsonErrResponse('Missing required parameter: collection', 400);
-    }
+    $result = removeCollection($collection);
+    db_close();
+    jsonResponse($result);
 } catch (Throwable $e) {
     error_log('[removeCollection.php] ERROR: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
     error_log('[removeCollection.php] Stack trace: ' . $e->getTraceAsString());
-    errorResponse($e->getMessage());
+    errorResponse($e);
 }
