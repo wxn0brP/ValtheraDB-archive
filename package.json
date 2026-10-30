@@ -24,12 +24,12 @@
     "devDependencies": {
         "@types/bun": "*",
         "@wxn0brp/biome": "*",
-        "@wxn0brp/db-core": "^0.12.12",
+        "@wxn0brp/db-core": "^0.12.14",
         "tsc-alias": "^1",
         "typescript": "^7"
     },
     "peerDependencies": {
-        "@wxn0brp/db-core": "^0.12.12"
+        "@wxn0brp/db-core": "^0.12.14"
     },
     "files": [
         "dist"

@@ -1,6 +1,7 @@
 import { errorFromWire } from "@wxn0brp/db-core/errors";
 import { serializeFunctions } from "./function";
 import { parseRemote } from "./parse";
+import { serializeRegex } from "./regex";
 import { Remote, RemoteConfig, RequestData } from "./remote";
 import { version } from "./version";
 
@@ -16,10 +17,16 @@ export class BaseRemote {
 		const processed = serializeFunctions(query);
 		const url = new URL(this.remote.url);
 
+		const payload = processed.data;
 		const data: RequestData = {
 			db: url.username,
 			auth: url.password,
-			query: processed.data,
+			query: payload?.search
+				? {
+						...payload,
+						search: serializeRegex(payload.search),
+					}
+				: payload,
 			keys: processed.keys,
 			...(this.remote.body || {}),
 		};

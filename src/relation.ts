@@ -2,6 +2,7 @@ import { RelationTypes } from "@wxn0brp/db-core";
 import { Search } from "@wxn0brp/db-core/types/arg";
 import { DbFindOpts } from "@wxn0brp/db-core/types/options";
 import { parseRemote } from "./parse";
+import { serializeRegex } from "./regex";
 import { RemoteConfig, Remote } from "./remote";
 
 export class RelationClient {
@@ -27,6 +28,8 @@ export class RelationClient {
 		});
 
 		if (typeof params[1] === "function") params[1] = params[1].toString();
+		else if (params[1] && typeof params[1] === "object")
+			params[1] = serializeRegex(params[1]);
 
 		url.pathname = url.pathname + "/r/" + type;
 		const body = {
