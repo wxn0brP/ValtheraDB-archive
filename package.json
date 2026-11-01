@@ -22,8 +22,8 @@
     "dependencies": {
         "@wxn0brp/ac": "^0.1.0",
         "@wxn0brp/db": "^0.120.6",
-        "@wxn0brp/db-core": "^0.12.14",
-        "@wxn0brp/db-storage-dir": "^0.120.8",
+        "@wxn0brp/db-core": "^0.12.15",
+        "@wxn0brp/db-storage-dir": "^0.120.9",
         "@wxn0brp/db-string-query": "^0.120.2",
         "@wxn0brp/falcon-frame": "^0.9.10",
         "@wxn0brp/falcon-frame-plugin": "^0.0.7",
