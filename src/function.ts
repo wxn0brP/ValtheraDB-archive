@@ -8,28 +8,31 @@ export function serializeFunctions(data: Record<string, any>) {
 	const functionPaths: string[][] = [];
 
 	function serialize(obj: Record<string, any>, path: string[] = []) {
-		for (const key of Object.keys(obj)) {
-			const value = obj[key];
+		const result: Record<string, any> = {};
+		for (const [key, value] of Object.entries(obj)) {
 			const nextPath = [
 				...path,
 				key,
 			];
-
 			if (typeof value === "function") {
 				functionPaths.push(nextPath);
-				obj[key] = value.toString();
-				continue;
+				result[key] = value.toString();
+			} else if (
+				value &&
+				typeof value === "object" &&
+				!Array.isArray(value) &&
+				Object.getPrototypeOf(value) === Object.prototype
+			) {
+				result[key] = serialize(value, nextPath);
+			} else {
+				result[key] = value;
 			}
-
-			if (value && typeof value === "object" && !Array.isArray(value))
-				serialize(value, nextPath);
 		}
+		return result;
 	}
 
-	serialize(data);
-
 	return {
-		data,
+		data: serialize(data),
 		keys: functionPaths,
 	};
 }

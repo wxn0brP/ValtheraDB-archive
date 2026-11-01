@@ -3,6 +3,7 @@ import { serializeFunctions } from "./function";
 import { parseRemote } from "./parse";
 import { serializeRegex } from "./regex";
 import { Remote, RemoteConfig, RequestData } from "./remote";
+import { findUndefinedPaths } from "./undefined";
 import { version } from "./version";
 
 export class BaseRemote {
@@ -15,6 +16,7 @@ export class BaseRemote {
 
 	async _request<T>(type: string, query?: any) {
 		const processed = serializeFunctions(query);
+		const undefinedPaths = findUndefinedPaths(query);
 		const url = new URL(this.remote.url);
 
 		const payload = processed.data;
@@ -28,6 +30,7 @@ export class BaseRemote {
 					}
 				: payload,
 			keys: processed.keys,
+			undefinedPaths,
 			...(this.remote.body || {}),
 		};
 

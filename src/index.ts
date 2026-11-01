@@ -5,6 +5,7 @@ export * from "./actions";
 export * from "./function";
 export * from "./regex";
 export * from "./remote";
+export * from "./undefined";
 export * from "./valthera";
 
 export const DYNAMIC = {
