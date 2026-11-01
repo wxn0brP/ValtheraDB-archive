@@ -20,6 +20,45 @@ export interface Query {
 	userId: string;
 	query: VQuery;
 	keys: string[][];
+	undefinedPaths?: string[][];
+}
+
+function restoreUndefined(query: VQuery, paths: string[][]) {
+	if (!Array.isArray(paths) || paths.length > 1000)
+		throw new Error("Invalid undefined paths");
+	for (const path of paths) {
+		if (
+			!Array.isArray(path) ||
+			path.length < 2 ||
+			path.length > 16 ||
+			path[0] !== "updater" ||
+			path.some(
+				part =>
+					typeof part !== "string" ||
+					!part ||
+					[
+						"__proto__",
+						"prototype",
+						"constructor",
+					].includes(part),
+			)
+		)
+			throw new Error("Invalid undefined path");
+		let target: any = query;
+		for (const part of path.slice(0, -1)) {
+			if (
+				!target ||
+				typeof target !== "object" ||
+				Array.isArray(target) ||
+				!Object.hasOwn(target, part)
+			)
+				throw new Error("Invalid undefined path");
+			target = target[part];
+		}
+		if (!target || typeof target !== "object" || Array.isArray(target))
+			throw new Error("Invalid undefined path");
+		target[path[path.length - 1]] = undefined;
+	}
 }
 
 export class Response {
@@ -106,7 +145,7 @@ function intersectCapabilities(caps: AdapterCapabilities) {
 }
 
 export async function dbLogic(serverQuery: Query): Promise<Response> {
-	const { type, dbName, userId, query, keys } = serverQuery;
+	const { type, dbName, userId, query, keys, undefinedPaths } = serverQuery;
 	const res = new Response();
 
 	const dbObj = dataCenter[dbName];
@@ -179,6 +218,7 @@ export async function dbLogic(serverQuery: Query): Promise<Response> {
 		if (!query.collection) return res.e(Codes.COLLECTION_REQ);
 
 		const withFns = deserializeFunctions(query, keys || []) as VQuery;
+		if (undefinedPaths?.length) restoreUndefined(withFns, undefinedPaths);
 		const parsedVQuery = (
 			withFns.search
 				? {

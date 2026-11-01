@@ -18,6 +18,7 @@ router.post("/:type", async (req, res) => {
 		userId: req.user._id,
 		query: getQuery(req),
 		keys: req.body.keys || [],
+		undefinedPaths: req.body.undefinedPaths,
 	});
 
 	result.ff(res);
@@ -35,6 +36,7 @@ router.post("/:db/:type", async (req, res) => {
 			...getQuery(req),
 		},
 		keys: req.body.keys || [],
+		undefinedPaths: req.body.undefinedPaths,
 	});
 
 	result.ff(res);
@@ -47,6 +49,7 @@ export const rootRouter: RouteHandler = async (req, res) => {
 		userId: req.user._id,
 		query: getQuery(req),
 		keys: req.body.keys || [],
+		undefinedPaths: req.body.undefinedPaths,
 	});
 
 	result.ff(res);
