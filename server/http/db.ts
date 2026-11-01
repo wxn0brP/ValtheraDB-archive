@@ -15,7 +15,7 @@ apiLimiter.register(
 	createRateLimiterPlugin({
 		maxRequests: parseInt(process.env.RATE_LIMIT_API_MAX) || 100,
 		windowMs: parseInt(process.env.RATE_LIMIT_API_WINDOW) || 60_000,
-		id: (req) => req.ip,
+		id: req => req.ip,
 		onLimitReached: (req, res) => {
 			res.status(429).json({
 				err: true,

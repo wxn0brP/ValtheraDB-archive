@@ -400,7 +400,12 @@ program
 			wardenMgmt.role.list(),
 		]);
 
-		const roleNameMap = new Map(roles.map(r => [r._id, r.name]));
+		const roleNameMap = new Map(
+			roles.map(r => [
+				r._id,
+				r.name,
+			]),
+		);
 
 		console.log("=== STATUS OVERVIEW ===\n");
 
@@ -434,8 +439,10 @@ program
 
 				console.log(`- ${user.login}`);
 				if (roleNames) console.log(`  Roles: ${roleNames}`);
-				if (userWolfTokens.length > 0) console.log(`  Wolf tokens: ${userWolfTokens.length}`);
-				if (userTokens.length > 0) console.log(`  JWT tokens: ${userTokens.length}`);
+				if (userWolfTokens.length > 0)
+					console.log(`  Wolf tokens: ${userWolfTokens.length}`);
+				if (userTokens.length > 0)
+					console.log(`  JWT tokens: ${userTokens.length}`);
 			}
 		}
 
