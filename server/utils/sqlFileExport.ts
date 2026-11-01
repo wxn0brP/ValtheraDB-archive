@@ -45,27 +45,51 @@ function getCollectionStruct(data: any[]) {
 	const keys = new Map<string, string>();
 	for (const item of data) {
 		for (const key of Object.keys(item)) {
-			if (keys.has(key)) continue;
-			keys.set(key, mapJsTypeToSqlType(item[key]));
+			if (item[key] == null) continue;
+			const type = mapJsTypeToSqlType(item[key]);
+			const previous = keys.get(key);
+			keys.set(
+				key,
+				previous && previous !== type
+					? (previous === "REAL" && type === "INTEGER") ||
+						(previous === "INTEGER" && type === "REAL")
+						? "REAL"
+						: "TEXT"
+					: type,
+			);
 		}
 	}
+	for (const item of data)
+		for (const key of Object.keys(item))
+			if (!keys.has(key)) keys.set(key, "TEXT");
 	return keys;
+}
+
+function sqlIdentifier(value: string) {
+	return `"${value.replace(/"/g, '""')}"`;
 }
 
 function processDataToOrder(data: any, order: string[]) {
 	const arr = [];
 	for (const key of order) {
 		const val = data[key];
+		if (val === null || val === undefined) {
+			arr.push("NULL");
+			continue;
+		}
 		switch (typeof val) {
 			case "string":
 				arr.push(sqlEscapeString(val));
 				break;
 			case "object":
-				arr.push(`'${JSON.stringify(val)}'`);
+				arr.push(sqlEscapeString(JSON.stringify(val)));
 				break;
 			default:
-				if (!val) arr.push("NULL");
-				else arr.push(val);
+				arr.push(
+					typeof val === "number" && !Number.isFinite(val)
+						? "NULL"
+						: String(val),
+				);
 		}
 	}
 	return arr.join(", ");
@@ -93,7 +117,7 @@ export class SQLFileCreator {
 
 		if (this.opts.dropIfExist) {
 			for (const collection of collections) {
-				sql += "DROP TABLE IF EXISTS " + collection + ";\n";
+				sql += "DROP TABLE IF EXISTS " + sqlIdentifier(collection) + ";\n";
 			}
 			sql += "\n";
 		}
@@ -125,10 +149,10 @@ export class SQLFileCreator {
 		let createIfNotExist = null;
 		if (this.opts.createIfNotExist) {
 			const construct = Array.from(keys)
-				.map(([k, v]) => `${k} ${v}`)
+				.map(([k, v]) => `${sqlIdentifier(k)} ${v}`)
 				.join(", ");
 			if (construct.trim().length > 0) {
-				createIfNotExist = `CREATE TABLE IF NOT EXISTS ${collection} (${construct});`;
+				createIfNotExist = `CREATE TABLE IF NOT EXISTS ${sqlIdentifier(collection)} (${construct});`;
 			}
 		}
 
@@ -137,7 +161,7 @@ export class SQLFileCreator {
 		let insert = null;
 
 		if (data.length > 0) {
-			insert = `INSERT INTO ${collection} (${order.join(", ")}) VALUES `;
+			insert = `INSERT INTO ${sqlIdentifier(collection)} (${order.map(sqlIdentifier).join(", ")}) VALUES `;
 			insert += enter;
 			insert += data
 				.map(d => "(" + processDataToOrder(d, order) + ")")

@@ -17,7 +17,7 @@ export function parseCSV(
 	const skipEmpty = opts.skipEmptyLines ?? true;
 	const trim = opts.trimFields ?? false;
 
-	const data = input.replace(/\r\n?/g, "\n");
+	const data = input.replace(/^\uFEFF/, "");
 	const rows: string[][] = [];
 	const currentRow: string[] = [];
 	let field = "";
@@ -61,10 +61,10 @@ export function parseCSV(
 			} else if (ch === delimiter) {
 				pushField();
 				i++;
-			} else if (ch === "\n") {
+			} else if (ch === "\n" || ch === "\r") {
 				pushField();
 				pushRow();
-				i++;
+				i += ch === "\r" && data[i + 1] === "\n" ? 2 : 1;
 			} else if (
 				opts.comment &&
 				field === "" &&
@@ -82,6 +82,7 @@ export function parseCSV(
 			}
 		}
 	}
+	if (inQuotes) throw new Error("CSV: unterminated quoted field");
 	pushField();
 	pushRow();
 
@@ -90,8 +91,14 @@ export function parseCSV(
 	if (headers.length === 0 || headers.every(h => h.trim() === "")) {
 		throw new Error("CSV: missing header row");
 	}
+	if (headers.some(h => !h.trim()) || new Set(headers).size !== headers.length)
+		throw new Error("CSV: empty or duplicate header");
 
-	return rows.slice(1).map(row => {
+	return rows.slice(1).map((row, index) => {
+		if (row.length !== headers.length)
+			throw new Error(
+				`CSV: row ${index + 2} has ${row.length} columns, expected ${headers.length}`,
+			);
 		const obj: CsvRecord = {};
 		for (let k = 0; k < headers.length; k++) {
 			obj[headers[k]] = row[k] ?? "";

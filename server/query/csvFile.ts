@@ -8,10 +8,21 @@ import { getDb } from "./query/utils";
 
 const router = new Router();
 
+function csvField(value: unknown) {
+	const text =
+		value == null
+			? ""
+			: typeof value === "object"
+				? JSON.stringify(value)
+				: String(value);
+	return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
 router.post("/import", async (req, res) => {
 	const dbName = req.body.db;
 	const csvContent = req.body.content;
 	const collection = (req.body.collection as string) || "";
+	const dryRun = req.body.dryRun === true;
 
 	if (!dbName || !csvContent || !collection) {
 		return res.status(400).json({
@@ -31,7 +42,15 @@ router.post("/import", async (req, res) => {
 	const { db, dir } = dbGet;
 
 	try {
-		const parsed = parseCSV(csvContent);
+		let parsed: ReturnType<typeof parseCSV>;
+		try {
+			parsed = parseCSV(csvContent);
+		} catch (err) {
+			return res.status(400).json({
+				err: true,
+				msg: err.message,
+			});
+		}
 
 		const type = "add";
 		if (!db[type] || typeof db[type] !== "function") {
@@ -54,14 +73,30 @@ router.post("/import", async (req, res) => {
 				msg: "Invalid collection: " + collection,
 			});
 		}
+		if (dryRun)
+			return res.json({
+				err: false,
+				count: parsed.length,
+			});
 
 		const results = [];
-		for (const row of parsed) {
-			const result = await db.add({
-				collection,
-				data: row,
-			});
-			results.push(result);
+		for (const [index, row] of parsed.entries()) {
+			try {
+				results.push(
+					await db.add({
+						collection,
+						data: row,
+					}),
+				);
+			} catch (err) {
+				logger.error(err);
+				return res.status(500).json({
+					err: true,
+					msg: err.message,
+					row: index + 2,
+					imported: results.length,
+				});
+			}
 		}
 
 		return res.json({
@@ -116,21 +151,13 @@ router.post("/export", async (req, res) => {
 			collection,
 			search: {},
 		});
-		const keys = Object.keys(Object.assign({}, ...data));
+		const keys = [
+			...new Set(data.flatMap(item => Object.keys(item))),
+		];
 		const rows = data
-			.map(item =>
-				keys
-					.map(key => {
-						const value = item[key];
-						if (value === null || value === undefined) return "";
-						if (typeof value === "object") return JSON.stringify(value);
-						if (typeof value === "string") return `"${value}"`;
-						return item[key];
-					})
-					.join(","),
-			)
+			.map(item => keys.map(key => csvField(item[key])).join(","))
 			.join("\n");
-		const result = `${keys.join(",")}\n${rows}`;
+		const result = `${keys.map(csvField).join(",")}\n${rows}`;
 
 		return res.json({
 			err: false,

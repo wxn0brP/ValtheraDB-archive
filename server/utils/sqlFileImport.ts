@@ -10,8 +10,7 @@ class SQLFileParser {
 	 * @returns An array of SQL queries processed for the engine.
 	 */
 	parse(sqlContent: string): string[] {
-		const withoutComments = this.removeComments(sqlContent);
-		const queries = this.splitQueries(withoutComments);
+		const queries = this.splitQueries(sqlContent);
 		const filteredQueries = this.filterUnsupportedQueries(queries);
 		const processedQueries = this.processInserts(filteredQueries);
 
@@ -24,13 +23,6 @@ class SQLFileParser {
 	 * @param sqlContent - Content of the SQL file.
 	 * @returns Content of the SQL file without comments.
 	 */
-	private removeComments(sqlContent: string): string {
-		let result = sqlContent.replace(/\/\*[\s\S]*?\*\//g, "");
-		result = result.replace(/--.*$/gm, "");
-
-		return result;
-	}
-
 	/**
 	 * Splits the SQL content into individual queries.
 	 * Assumes that queries are separated by semicolons (;).
@@ -38,10 +30,44 @@ class SQLFileParser {
 	 * @returns An array of SQL queries.
 	 */
 	private splitQueries(sqlContent: string): string[] {
-		return sqlContent
-			.split(";")
-			.map(query => query.trim())
-			.filter(query => query.length > 0);
+		const queries: string[] = [];
+		let current = "";
+		let quote = "";
+		for (let i = 0; i < sqlContent.length; i++) {
+			const ch = sqlContent[i];
+			const next = sqlContent[i + 1];
+			if (quote) {
+				current += ch;
+				if (ch === "\\" && next) current += sqlContent[++i];
+				else if (ch === quote && next === quote) current += sqlContent[++i];
+				else if (ch === quote) quote = "";
+				continue;
+			}
+			if (ch === "'" || ch === '"' || ch === "`") {
+				quote = ch;
+				current += ch;
+			} else if (ch === "-" && next === "-") {
+				while (i < sqlContent.length && sqlContent[i] !== "\n") i++;
+				current += "\n";
+			} else if (ch === "/" && next === "*") {
+				i += 2;
+				while (
+					i < sqlContent.length &&
+					!(sqlContent[i] === "*" && sqlContent[i + 1] === "/")
+				)
+					i++;
+				if (i >= sqlContent.length)
+					throw new Error("SQL: unterminated comment");
+				i++;
+				current += " ";
+			} else if (ch === ";") {
+				if (current.trim()) queries.push(current.trim());
+				current = "";
+			} else current += ch;
+		}
+		if (quote) throw new Error("SQL: unterminated quoted value");
+		if (current.trim()) queries.push(current.trim());
+		return queries;
 	}
 
 	/**
@@ -74,7 +100,11 @@ class SQLFileParser {
 			const lastChar = i > 0 ? valuesPart[i - 1] : "";
 
 			if (inString) {
-				if (char === quoteChar && lastChar !== "\\") {
+				if (char === "\\" && i + 1 < valuesPart.length) {
+					i++;
+				} else if (char === quoteChar && valuesPart[i + 1] === quoteChar) {
+					i++;
+				} else if (char === quoteChar && lastChar !== "\\") {
 					inString = false;
 				}
 			} else {
