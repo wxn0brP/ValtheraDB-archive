@@ -1,4 +1,6 @@
 import { errorFromWire } from "@wxn0brp/db-core/errors";
+import { VQueryT } from "@wxn0brp/db-core/types/query";
+import { updateFindObject } from "@wxn0brp/db-core/utils/updateFindObject";
 import { serializeFunctions } from "./function";
 import { parseRemote } from "./parse";
 import { serializeRegex } from "./regex";
@@ -12,6 +14,37 @@ export class BaseRemote {
 
 	constructor(remote: string | RemoteConfig) {
 		this.remote = parseRemote(remote);
+	}
+
+	async _find<T = any>(query: VQueryT.Find<T>): Promise<T[]> {
+		const findOpts = query.findOpts;
+
+		if (typeof findOpts?.transform !== "function")
+			return this._request<T[]>("find", query);
+
+		const remoteQuery = {
+			...query,
+			findOpts: {},
+		};
+		const docs = await this._request<T[]>("find", remoteQuery);
+
+		return docs.map(doc => updateFindObject(doc, findOpts)) as T[];
+	}
+
+	async _findOne<T = any>(query: VQueryT.FindOne<T>): Promise<T | null> {
+		const findOpts = query.findOpts;
+
+		if (typeof findOpts?.transform !== "function")
+			return this._request<T | null>("findOne", query);
+
+		const remoteQuery = {
+			...query,
+			findOpts: {},
+		};
+		const doc = await this._request<T | null>("findOne", remoteQuery);
+		if (!doc) return null;
+
+		return updateFindObject(doc, findOpts) as T | null;
 	}
 
 	async _request<T>(type: string, query?: any) {

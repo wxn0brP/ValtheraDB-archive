@@ -56,14 +56,14 @@ export class ValtheraRemote extends BaseRemote implements ValtheraCompatible {
 	 * Find data in a database.
 	 */
 	find<T = Data>(query: VQueryT.Find<T>) {
-		return this._request<T[]>("find", query);
+		return this._find<T>(query);
 	}
 
 	/**
 	 * Find one data entry in a database.
 	 */
 	findOne<T = Data>(query: VQueryT.FindOne<T>) {
-		return this._request<T | null>("findOne", query);
+		return this._findOne<T>(query);
 	}
 
 	/**

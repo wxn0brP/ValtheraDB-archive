@@ -66,11 +66,11 @@ export class RemoteActionsBase
 	}
 
 	async find(config: VQueryT.Find) {
-		return this._request<DataInternal[]>("find", config);
+		return this._find<DataInternal>(config);
 	}
 
 	async findOne(config: VQueryT.FindOne) {
-		return this._request<DataInternal | null>("findOne", config);
+		return this._findOne<DataInternal>(config);
 	}
 
 	async update(config: VQueryT.Update) {
