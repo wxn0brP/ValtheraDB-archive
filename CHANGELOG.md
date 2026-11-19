@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.120.11](https://github.com/wxn0brP/ValtheraDB-client/compare/v0.120.10...v0.120.11) (2026-11-19)
+
+
+### Features
+
+* bump deps ([e436035](https://github.com/wxn0brP/ValtheraDB-client/commit/e4360354f69de5def4c7f42c356b8bf04e5806f4))
+
+
+### Bug Fixes
+
+* run findOpts transform on client side ([6f8b9a3](https://github.com/wxn0brP/ValtheraDB-client/commit/6f8b9a3b9384e58d475a31b38c0f11f9021674f5))
+* undefined ([c4f887c](https://github.com/wxn0brP/ValtheraDB-client/commit/c4f887c9c3768b605e6f78a3a36bd85241d4b112))
+
 ### [0.120.10](https://github.com/wxn0brP/ValtheraDB-client/compare/v0.120.9...v0.120.10) (2026-10-30)
 
 
