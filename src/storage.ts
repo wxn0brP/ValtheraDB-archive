@@ -1,12 +1,12 @@
 import { CustomFileCpu } from "@wxn0brp/db-core";
-import { CustomActionsBase } from "@wxn0brp/db-core/base/custom";
+import { CustomAdapterBase } from "@wxn0brp/db-core/base/customAdapter";
 import { addIdBulk } from "@wxn0brp/db-core/helpers/addId";
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { hasFieldsAdvanced } from "@wxn0brp/db-core/utils/hasFieldsAdvanced";
 import { version } from "./version";
 
-export class WebStorageActions extends CustomActionsBase {
+export class WebStorageActions extends CustomAdapterBase {
 	version = version;
 	capabilities = {
 		transactions: false,

@@ -1,6 +1,6 @@
 import { forgeTypedValthera, ValtheraClass } from "@wxn0brp/db-core";
-import { Collection } from "@wxn0brp/db-core/helpers/collection";
 import { Data } from "@wxn0brp/db-core/types/data";
+import { TypedValthera } from "@wxn0brp/db-core/types/typed";
 import { IndexedDBActions } from "./indexed";
 import { WebStorageActions } from "./storage";
 
@@ -11,7 +11,7 @@ export function createWebStorageValthera<T extends Record<string, Data[]>>(
 	name: string,
 	data?: T,
 	storage: Storage = localStorage,
-): ValtheraClass & { [K in keyof T]: Collection<T[K][number]> } {
+): TypedValthera<T, ValtheraClass> {
 	const db = new ValtheraClass({
 		adapter: new WebStorageActions(name, storage),
 	});
@@ -26,7 +26,7 @@ export function createWebStorageValthera<T extends Record<string, Data[]>>(
 
 export function createIndexedDBValthera<T extends Record<string, Data[]>>(
 	name: string,
-): ValtheraClass & { [K in keyof T]: Collection<T[K][number]> } {
+): TypedValthera<T, ValtheraClass> {
 	const db = new ValtheraClass({
 		adapter: new IndexedDBActions(name),
 	});
