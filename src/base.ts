@@ -1,6 +1,6 @@
 import { errorFromWire } from "@wxn0brp/db-core/errors";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { updateFindObject } from "@wxn0brp/db-core/utils/updateFindObject";
+import { updateFindObject } from "@wxn0brp/db-core/utils/projection";
 import { serializeFunctions } from "./function";
 import { parseRemote } from "./parse";
 import { serializeRegex } from "./regex";

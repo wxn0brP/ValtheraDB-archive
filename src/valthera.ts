@@ -2,7 +2,8 @@ import {
 	Collection,
 	resolveCollection,
 } from "@wxn0brp/db-core/helpers/collection";
-import { AdapterCapabilities } from "@wxn0brp/db-core/types/action";
+import { ResultPromise } from "@wxn0brp/db-core/helpers/resultPromise";
+import { AdapterCapabilities } from "@wxn0brp/db-core/types/adapter";
 import { Data } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { ValtheraCompatible } from "@wxn0brp/db-core/types/valthera";
@@ -98,9 +99,8 @@ export class ValtheraRemote extends BaseRemote implements ValtheraCompatible {
 	 * Asynchronously updates one entry in a database or adds a new one if it doesn't exist.
 	 */
 	updateOneOrAdd<T = Data>(query: VQueryT.UpdateOneOrAdd<T>) {
-		return this._request<VQueryT.UpdateOneOrAddResult<T>>(
-			"updateOneOrAdd",
-			query,
+		return ResultPromise.wrap(
+			this._request<VQueryT.UpdateOneOrAddResult<T>>("updateOneOrAdd", query),
 		);
 	}
 
@@ -108,7 +108,9 @@ export class ValtheraRemote extends BaseRemote implements ValtheraCompatible {
 	 * Asynchronously removes one entry in a database or adds a new one if it doesn't exist. Usage e.g. for toggling a flag.
 	 */
 	toggleOne<T = Data>(query: VQueryT.ToggleOne<T>) {
-		return this._request<VQueryT.ToggleOneResult<T>>("toggleOne", query);
+		return ResultPromise.wrap(
+			this._request<VQueryT.ToggleOneResult<T>>("toggleOne", query),
+		);
 	}
 
 	/**

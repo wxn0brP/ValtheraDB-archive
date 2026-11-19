@@ -1,8 +1,8 @@
 import { Id } from "@wxn0brp/db-core";
 import {
+	AdapterBaseInterface,
 	AdapterCapabilities,
-	ActionsBaseInterface,
-} from "@wxn0brp/db-core/types/action";
+} from "@wxn0brp/db-core/types/adapter";
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { AdapterOpts } from "@wxn0brp/db-core/types/options";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
@@ -11,7 +11,7 @@ import { BaseRemote } from "./base";
 
 export class RemoteActionsBase
 	extends BaseRemote
-	implements ActionsBaseInterface
+	implements AdapterBaseInterface
 {
 	_inited: boolean = false;
 	// TODO: client don't send adapterOpts to server

@@ -1,9 +1,10 @@
 import { RelationTypes } from "@wxn0brp/db-core";
+import { errorFromWire, RemoteError } from "@wxn0brp/db-core/errors";
 import { Search } from "@wxn0brp/db-core/types/arg";
 import { DbFindOpts } from "@wxn0brp/db-core/types/options";
 import { parseRemote } from "./parse";
 import { serializeRegex } from "./regex";
-import { RemoteConfig, Remote } from "./remote";
+import { Remote, RemoteConfig } from "./remote";
 
 export class RelationClient {
 	remote: Record<string, Remote> = {};
@@ -50,7 +51,7 @@ export class RelationClient {
 
 		if (!response.ok) {
 			const text = await response.text();
-			throw new Error(`HTTP ${response.status}: ${text}`);
+			throw new RemoteError(`HTTP ${response.status}: ${text}`);
 		}
 
 		const data = (await response.json()) as {
@@ -59,7 +60,9 @@ export class RelationClient {
 			result: any;
 		};
 		if (data.err)
-			throw new Error(data.msg || "Unknown error from relation API");
+			throw errorFromWire({
+				message: data.msg || "Unknown error from relation API",
+			});
 
 		return data.result;
 	}
