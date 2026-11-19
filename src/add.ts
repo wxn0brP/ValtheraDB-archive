@@ -1,8 +1,8 @@
 import { addId, addIdBulk } from "@wxn0brp/db-core/helpers/addId";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { MongoDbAction } from "./actions";
+import { MongoDbAdapter } from "./adapter";
 
-export async function add(mongo: MongoDbAction, query: VQueryT.Add) {
+export async function add(mongo: MongoDbAdapter, query: VQueryT.Add) {
 	const { collection, data } = query;
 	const coll = mongo._getCollection(collection);
 	const opts = mongo._session
@@ -26,7 +26,7 @@ export async function add(mongo: MongoDbAction, query: VQueryT.Add) {
 	return data;
 }
 
-export async function bulkAdd(mongo: MongoDbAction, query: VQueryT.BulkAdd) {
+export async function bulkAdd(mongo: MongoDbAdapter, query: VQueryT.BulkAdd) {
 	const { collection, datas } = query;
 	const coll = mongo._getCollection(collection);
 	const opts = mongo._session

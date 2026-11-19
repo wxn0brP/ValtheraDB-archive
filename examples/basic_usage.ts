@@ -1,10 +1,10 @@
 import { ValtheraClass } from "@wxn0brp/db-core";
-import { MongoDbAction } from "../src";
+import { MongoDbAdapter } from "../src";
 
 const MONGO_URI = "mongodb://localhost:27017";
 const DB_NAME = "vdb-mongo-bridge-test";
 
-const actions = new MongoDbAction(MONGO_URI, DB_NAME);
+const actions = new MongoDbAdapter(MONGO_URI, DB_NAME);
 const db = new ValtheraClass({ adapter: actions });
 
 try {

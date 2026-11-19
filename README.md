@@ -14,12 +14,12 @@ bun i @wxn0brp/db-storage-mongodb
 
 ```typescript
 import { ValtheraClass } from "@wxn0brp/db-core";
-import { MongoDbAction } from "@wxn0brp/db-storage-mongodb";
+import { MongoDbAdapter } from "@wxn0brp/db-storage-mongodb";
 
 const MONGO_URI = "mongodb://localhost:27017";
 const DB_NAME = "my-app-db";
 
-const actions = new MongoDbAction(MONGO_URI, DB_NAME);
+const actions = new MongoDbAdapter(MONGO_URI, DB_NAME);
 const db = new ValtheraClass({ dbAction: actions });
 
 try {

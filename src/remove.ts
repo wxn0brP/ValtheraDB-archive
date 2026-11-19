@@ -1,10 +1,10 @@
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { MongoDbAction } from "./actions";
+import { MongoDbAdapter } from "./adapter";
 import { cleanDocs } from "./utils";
 import { resolveSearch } from "./utils/update";
 
-export async function remove(mongo: MongoDbAction, query: VQueryT.Remove) {
+export async function remove(mongo: MongoDbAdapter, query: VQueryT.Remove) {
 	const { collection, search, context } = query;
 	const coll = mongo._getCollection(collection);
 	const opts = mongo._session
@@ -32,7 +32,7 @@ export async function remove(mongo: MongoDbAction, query: VQueryT.Remove) {
 	return cleanDocs(result) as DataInternal[];
 }
 
-export async function removeOne(mongo: MongoDbAction, query: VQueryT.Remove) {
+export async function removeOne(mongo: MongoDbAdapter, query: VQueryT.Remove) {
 	const { collection, search, context } = query;
 	const coll = mongo._getCollection(collection);
 	const opts = mongo._session

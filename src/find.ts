@@ -2,11 +2,11 @@ import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { warnDeprecated } from "@wxn0brp/db-core/utils/deprecation";
 import { findUtil } from "@wxn0brp/db-core/utils/findUtil";
 import { hasFieldsAdvanced } from "@wxn0brp/db-core/utils/hasFieldsAdvanced";
-import { MongoDbAction } from "./actions";
+import { MongoDbAdapter } from "./adapter";
 import { cleanDocs, needsJsFallback, translateQuery } from "./utils";
 import { nativeAggregate } from "./utils/aggregate";
 
-export async function find(mongo: MongoDbAction, query: VQueryT.Find) {
+export async function find(mongo: MongoDbAdapter, query: VQueryT.Find) {
 	const { collection, search, dbFindOpts = {}, findOpts, context } = query;
 	const coll = mongo._getCollection(collection);
 	const opts = mongo._session
@@ -102,7 +102,7 @@ export async function find(mongo: MongoDbAction, query: VQueryT.Find) {
 	return mongo._applyFindOpts(found, findOpts);
 }
 
-export async function findOne(mongo: MongoDbAction, query: VQueryT.FindOne) {
+export async function findOne(mongo: MongoDbAdapter, query: VQueryT.FindOne) {
 	const { collection, search, findOpts, context } = query;
 	const coll = mongo._getCollection(collection);
 	const opts = mongo._session

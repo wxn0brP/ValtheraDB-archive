@@ -1,7 +1,7 @@
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { warnDeprecated } from "@wxn0brp/db-core/utils/deprecation";
-import { MongoDbAction } from "./actions";
+import { MongoDbAdapter } from "./adapter";
 import { cleanDocs } from "./utils";
 import {
 	applyJsUpdater,
@@ -13,7 +13,7 @@ import {
 	translateUpdater,
 } from "./utils/update";
 
-export async function update(mongo: MongoDbAction, query: VQueryT.Update) {
+export async function update(mongo: MongoDbAdapter, query: VQueryT.Update) {
 	const { collection, search, updater, context } = query;
 	const coll = mongo._getCollection(collection);
 	const opts = mongo._session
@@ -105,7 +105,7 @@ export async function update(mongo: MongoDbAction, query: VQueryT.Update) {
 	return cleanDocs(emptyResult);
 }
 
-export async function updateOne(mongo: MongoDbAction, query: VQueryT.Update) {
+export async function updateOne(mongo: MongoDbAdapter, query: VQueryT.Update) {
 	const { collection, search, updater, context } = query;
 	const coll = mongo._getCollection(collection);
 	const opts = mongo._session

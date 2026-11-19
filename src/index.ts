@@ -1,9 +1,9 @@
 import { MongoClientOptions } from "mongodb";
-import { MongoDbAction } from "./actions";
-export * from "./actions";
+import { MongoDbAdapter } from "./adapter";
+export * from "./adapter";
 
 export const DYNAMIC = {
 	def(mongoUri: string, dbName: string, clientOpts?: MongoClientOptions) {
-		return new MongoDbAction(mongoUri, dbName, clientOpts);
+		return new MongoDbAdapter(mongoUri, dbName, clientOpts);
 	},
 };
