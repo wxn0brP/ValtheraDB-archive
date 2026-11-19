@@ -1,7 +1,7 @@
 import { Data, DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { updateObj } from "@wxn0brp/db-core/utils/process";
-import { SQLiteValthera } from "./actions";
+import { SQLiteAdapter } from "./adapter";
 import { buildWhere } from "./buildWhere";
 import { COMPLEX_OPS } from "./const";
 import { find } from "./find";
@@ -9,7 +9,7 @@ import { AffinityMap } from "./types";
 import { execStmt, qid, toSqlValue } from "./utils";
 
 export async function update(
-	slv: SQLiteValthera,
+	slv: SQLiteAdapter,
 	query: VQueryT.Update,
 	one: boolean,
 ) {
@@ -88,7 +88,7 @@ export async function update(
 }
 
 async function updateOne(
-	slv: SQLiteValthera,
+	slv: SQLiteAdapter,
 	query: VQueryT.Update,
 	target: any,
 	key: string,

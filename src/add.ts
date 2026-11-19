@@ -1,10 +1,10 @@
 import { QueryValidationError } from "@wxn0brp/db-core";
 import { addId, addIdBulk } from "@wxn0brp/db-core/helpers/addId";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { SQLiteValthera } from "./actions";
+import { SQLiteAdapter } from "./adapter";
 import { execStmt, qid, toSqlValue } from "./utils";
 
-export async function add(slv: SQLiteValthera, config: VQueryT.Add) {
+export async function add(slv: SQLiteAdapter, config: VQueryT.Add) {
 	const { data, collection } = config;
 	await addId(config, slv, true);
 
@@ -34,7 +34,7 @@ export async function add(slv: SQLiteValthera, config: VQueryT.Add) {
 	return data;
 }
 
-export async function bulkAdd(slv: SQLiteValthera, config: VQueryT.BulkAdd) {
+export async function bulkAdd(slv: SQLiteAdapter, config: VQueryT.BulkAdd) {
 	const { collection, datas } = config;
 	if (datas.length === 0) return datas;
 

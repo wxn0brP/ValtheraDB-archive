@@ -2,7 +2,7 @@ import { Data } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { findUtil } from "@wxn0brp/db-core/utils/findUtil";
 import { findObj } from "@wxn0brp/db-core/utils/process";
-import { SQLiteValthera } from "./actions";
+import { SQLiteAdapter } from "./adapter";
 import { buildWhere } from "./buildWhere";
 import { decodeSqlValue, execStmt, qid } from "./utils";
 
@@ -30,7 +30,7 @@ function parseRow(row: Record<string, any>): Record<string, any> {
 }
 
 export async function find(
-	slv: SQLiteValthera,
+	slv: SQLiteAdapter,
 	config: VQueryT.Find,
 ): Promise<Data[]> {
 	const { collection, search } = config;

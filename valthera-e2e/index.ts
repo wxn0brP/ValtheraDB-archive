@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { SQLiteValthera } from "../src/index";
+import { SQLiteAdapter } from "../src/index";
 import { TABLES } from "./tables";
 
 export default async () => {
@@ -7,7 +7,7 @@ export default async () => {
 
 	for (const table of TABLES) sqlDB.prepare(table).run();
 
-	const actions = new SQLiteValthera(sqlDB);
+	const actions = new SQLiteAdapter(sqlDB);
 	actions._inited = true;
 	return actions;
 };

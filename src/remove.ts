@@ -1,12 +1,12 @@
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { SQLiteValthera } from "./actions";
+import { SQLiteAdapter } from "./adapter";
 import { BATCH_SIZE } from "./const";
 import { find } from "./find";
 import { execStmt, qid } from "./utils";
 
 export async function remove(
-	slv: SQLiteValthera,
+	slv: SQLiteAdapter,
 	query: VQueryT.Remove,
 	one: boolean,
 ) {
