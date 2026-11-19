@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { QueryValidationError } from "@wxn0brp/db-core/errors";
 import { translateQuery } from "../src/utils/index";
 
 describe("translateQuery", () => {
@@ -575,8 +576,8 @@ describe("translateQuery", () => {
 		});
 	});
 
-	it("36. handles $between with undefined bounds", () => {
-		expect(
+	it("36. rejects $between with undefined bounds", () => {
+		expect(() =>
 			translateQuery({
 				$between: {
 					age: [
@@ -585,12 +586,8 @@ describe("translateQuery", () => {
 					],
 				},
 			}),
-		).toEqual({
-			age: {
-				$gte: 10,
-			},
-		});
-		expect(
+		).toThrow(QueryValidationError);
+		expect(() =>
 			translateQuery({
 				$between: {
 					age: [
@@ -599,11 +596,7 @@ describe("translateQuery", () => {
 					],
 				},
 			}),
-		).toEqual({
-			age: {
-				$lte: 20,
-			},
-		});
+		).toThrow(QueryValidationError);
 	});
 
 	it("37. handles $startswith operator", () => {
@@ -738,14 +731,25 @@ describe("translateQuery", () => {
 		expect(
 			translateQuery({
 				$arrinc: {
-					tags: "urgent",
+					tags: [
+						"urgent",
+					],
 				},
 			}),
 		).toEqual({
 			tags: {
-				$in: "urgent",
+				$in: [
+					"urgent",
+				],
 			},
 		});
+		expect(() =>
+			translateQuery({
+				$arrinc: {
+					tags: "urgent",
+				},
+			}),
+		).toThrow(QueryValidationError);
 	});
 
 	it("45. handles $arrincall operator", () => {

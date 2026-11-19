@@ -1,3 +1,7 @@
+import { QueryValidationError } from "@wxn0brp/db-core/errors";
+import { warnDeprecated } from "@wxn0brp/db-core/utils/deprecation";
+import { isUnsafeKey } from "@wxn0brp/db-core/utils/security";
+
 const JS_FALLBACK_OPS = new Set([
 	"$idgt",
 	"$idlt",
@@ -19,17 +23,27 @@ const TYPE_MAP: Record<string, string> = {
 	bigint: "long",
 };
 
-export function translateQuery(query: any): any {
+export function translateQuery(query: any, fieldLevel = false): any {
 	if (!query || typeof query !== "object") return query;
 
-	if (query.$and) {
-		if (!Array.isArray(query.$and) || query.$and.length === 0) return {};
+	if (!fieldLevel && Object.hasOwn(query, "$and")) {
+		if (!Array.isArray(query.$and))
+			throw new QueryValidationError("$and must be an array", {
+				op: "search",
+				key: "$and",
+			});
+		if (query.$and.length === 0) return {};
 		return {
 			$and: query.$and.map((q: any) => translateQuery(q)),
 		};
 	}
-	if (query.$or) {
-		if (!Array.isArray(query.$or) || query.$or.length === 0)
+	if (!fieldLevel && Object.hasOwn(query, "$or")) {
+		if (!Array.isArray(query.$or))
+			throw new QueryValidationError("$or must be an array", {
+				op: "search",
+				key: "$or",
+			});
+		if (query.$or.length === 0)
 			return {
 				_id: null,
 			};
@@ -42,7 +56,9 @@ export function translateQuery(query: any): any {
 	const exactFields: Record<string, any> = {};
 
 	for (const key in query) {
+		if (!Object.hasOwn(query, key) || isUnsafeKey(key)) continue;
 		if (key.startsWith("$")) {
+			if (fieldLevel) continue;
 			$fields[key.toLowerCase()] = query[key];
 		} else {
 			exactFields[key] = query[key];
@@ -58,7 +74,7 @@ export function translateQuery(query: any): any {
 				$type: "null",
 			};
 		} else if (typeof val === "object" && !Array.isArray(val)) {
-			const nested = translateQuery(val);
+			const nested = translateQuery(val, true);
 			if (
 				nested &&
 				typeof nested === "object" &&
@@ -83,36 +99,47 @@ export function translateQuery(query: any): any {
 	for (const op in $fields) {
 		if (JS_FALLBACK_OPS.has(op) || op === "$not") continue;
 		const val = $fields[op];
-		if (typeof val !== "object" || val === null) continue;
+		if (val === null || typeof val !== "object" || Array.isArray(val))
+			throw new QueryValidationError(
+				`Operator "${op}" requires an object value`,
+				{
+					op: "search",
+					key: op,
+				},
+			);
 		for (const field in val) {
+			if (!Object.hasOwn(val, field) || isUnsafeKey(field)) continue;
 			fieldOps[field] ??= {};
 			translateOperator(op, val[field], fieldOps[field]);
 		}
 	}
 
-	if ("$not" in $fields) {
+	if (Object.hasOwn($fields, "$not")) {
 		const notSub = $fields.$not;
-		if (typeof notSub === "object" && notSub !== null) {
-			const translated = translateQuery(notSub);
-			for (const f in translated) {
-				if (f === "$and" || f === "$or") {
-					mongoQuery.$and ??= [];
-					mongoQuery.$and.push({
-						$nor: [
-							translated,
-						],
-					});
-				} else if (
-					typeof translated[f] === "object" &&
-					!Array.isArray(translated[f]) &&
-					translated[f] !== null
-				) {
-					fieldOps[f] ??= {};
-					fieldOps[f].$not = translated[f];
-				} else {
-					fieldOps[f] ??= {};
-					fieldOps[f].$ne = translated[f];
-				}
+		if (typeof notSub !== "object" || notSub === null)
+			throw new QueryValidationError("Fields must be an object", {
+				op: "search",
+				key: "$not",
+			});
+		const translated = translateQuery(notSub);
+		for (const f in translated) {
+			if (f === "$and" || f === "$or") {
+				mongoQuery.$and ??= [];
+				mongoQuery.$and.push({
+					$nor: [
+						translated,
+					],
+				});
+			} else if (
+				typeof translated[f] === "object" &&
+				!Array.isArray(translated[f]) &&
+				translated[f] !== null
+			) {
+				fieldOps[f] ??= {};
+				fieldOps[f].$not = translated[f];
+			} else {
+				fieldOps[f] ??= {};
+				fieldOps[f].$ne = translated[f];
 			}
 		}
 	}
@@ -146,10 +173,17 @@ function translateOperator(
 		case "$lt":
 		case "$gte":
 		case "$lte":
-		case "$in":
-		case "$nin":
 		case "$ne":
 		case "$size":
+			target[op] = value;
+			break;
+		case "$in":
+		case "$nin":
+			if (!Array.isArray(value))
+				throw new QueryValidationError(`Operator "${op}" requires an array`, {
+					op: "search",
+					key: op,
+				});
 			target[op] = value;
 			break;
 		case "$exists":
@@ -160,6 +194,11 @@ function translateOperator(
 				target.$regex = value.source;
 				if (value.flags) target.$options = value.flags;
 			} else {
+				if (typeof value === "string")
+					warnDeprecated(
+						"VALTHERA_REGEX_STRING_PATTERN",
+						"$regex with a string pattern is deprecated; pass a RegExp instance instead.",
+					);
 				target.$regex = value;
 			}
 			break;
@@ -178,19 +217,37 @@ function translateOperator(
 			target.$options = "i";
 			break;
 		case "$between": {
-			if (Array.isArray(value)) {
-				if (value[0] !== undefined) target.$gte = value[0];
-				if (value[1] !== undefined) target.$lte = value[1];
-			}
+			if (
+				!Array.isArray(value) ||
+				value.length !== 2 ||
+				typeof value[0] !== "number" ||
+				typeof value[1] !== "number"
+			)
+				throw new QueryValidationError("$between requires [min, max]", {
+					op: "search",
+					key: "between",
+				});
+			target.$gte = value[0];
+			target.$lte = value[1];
 			break;
 		}
 		case "$type":
 			target.$type = TYPE_MAP[value] ?? value;
 			break;
 		case "$arrinc":
+			if (!Array.isArray(value))
+				throw new QueryValidationError(`Operator "${op}" requires an array`, {
+					op: "search",
+					key: "arrinc",
+				});
 			target.$in = value;
 			break;
 		case "$arrincall":
+			if (!Array.isArray(value))
+				throw new QueryValidationError(`Operator "${op}" requires an array`, {
+					op: "search",
+					key: "arrincall",
+				});
 			target.$all = value;
 			break;
 	}
@@ -198,8 +255,10 @@ function translateOperator(
 
 export function needsJsFallback(query: any): boolean {
 	if (!query || typeof query !== "object") return false;
-	if (query.$and) return query.$and.some((q: any) => needsJsFallback(q));
-	if (query.$or) return query.$or.some((q: any) => needsJsFallback(q));
+	if (Array.isArray(query.$and))
+		return query.$and.some((q: any) => needsJsFallback(q));
+	if (Array.isArray(query.$or))
+		return query.$or.some((q: any) => needsJsFallback(q));
 	if (query.$not) return needsJsFallback(query.$not);
 	for (const key in query) {
 		if (key.startsWith("$") && JS_FALLBACK_OPS.has(key.toLowerCase()))

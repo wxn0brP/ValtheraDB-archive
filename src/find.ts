@@ -1,5 +1,6 @@
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { findUtil } from "@wxn0brp/db-core/utils/action";
+import { warnDeprecated } from "@wxn0brp/db-core/utils/deprecation";
+import { findUtil } from "@wxn0brp/db-core/utils/findUtil";
 import { hasFieldsAdvanced } from "@wxn0brp/db-core/utils/hasFieldsAdvanced";
 import { MongoDbAction } from "./actions";
 import { cleanDocs, needsJsFallback, translateQuery } from "./utils";
@@ -69,6 +70,10 @@ export async function find(mongo: MongoDbAction, query: VQueryT.Find) {
 	}
 
 	if (searchIsFunc) {
+		warnDeprecated(
+			"VALTHERA_FUNCTION_SEARCH",
+			"Function-based search is deprecated; use operator objects or a plugin.",
+		);
 		const all = await coll.find({}, opts).toArray();
 		const filtered = cleanDocs(all).filter((d: any) => search(d, context));
 		const results = await findUtil(query, filtered, [
@@ -107,6 +112,10 @@ export async function findOne(mongo: MongoDbAction, query: VQueryT.FindOne) {
 		: {};
 
 	if (typeof search === "function") {
+		warnDeprecated(
+			"VALTHERA_FUNCTION_SEARCH",
+			"Function-based search is deprecated; use operator objects or a plugin.",
+		);
 		const all = await coll.find({}, opts).toArray();
 		const found = cleanDocs(all).find((d: any) => search(d, context));
 		return mongo._applyFindOpts(found ?? null, findOpts);

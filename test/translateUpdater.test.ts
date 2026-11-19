@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { QueryValidationError } from "@wxn0brp/db-core/errors";
 import { translateUpdater, isEmptyUpdate } from "../src/utils/update";
 
 describe("translateUpdater", () => {
@@ -220,16 +221,12 @@ describe("translateUpdater", () => {
 		});
 	});
 
-	it("17. passes through unknown $ operators to $set", () => {
-		expect(
+	it("17. rejects unknown $ operators", () => {
+		expect(() =>
 			translateUpdater({
 				$unknown: "val",
 			} as any),
-		).toEqual({
-			$set: {
-				$unknown: "val",
-			},
-		});
+		).toThrow(QueryValidationError);
 	});
 
 	it("18. combines direct fields with operators", () => {
@@ -274,16 +271,12 @@ describe("translateUpdater", () => {
 		expect(translateUpdater({})).toEqual({});
 	});
 
-	it("21. handles operator with non-object value (falls to directSet)", () => {
-		expect(
+	it("21. rejects operator with non-object value", () => {
+		expect(() =>
 			translateUpdater({
 				$inc: "invalid",
 			} as any),
-		).toEqual({
-			$set: {
-				$inc: "invalid",
-			},
-		});
+		).toThrow(QueryValidationError);
 	});
 
 	it("22. handles $dec with multiple fields", () => {

@@ -1,5 +1,5 @@
 import { Id } from "@wxn0brp/db-core";
-import { ActionsBase } from "@wxn0brp/db-core/base/actions";
+import { AdapterBase } from "@wxn0brp/db-core/base/adapter";
 import {
 	AdapterCloseError,
 	AdapterError,
@@ -10,7 +10,7 @@ import {
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { TransactionHandle } from "@wxn0brp/db-core/types/transaction";
-import { updateFindObject } from "@wxn0brp/db-core/utils/updateFindObject";
+import { updateFindObject } from "@wxn0brp/db-core/utils/projection";
 import {
 	ClientSession,
 	Collection,
@@ -25,7 +25,7 @@ import { update, updateOne } from "./update";
 import { needsJsFallback, translateQuery } from "./utils";
 import { version } from "./version";
 
-export class MongoDbAction extends ActionsBase {
+export class MongoDbAction extends AdapterBase {
 	_client: MongoClient;
 	_db: Db;
 	_session: ClientSession | null = null;
@@ -167,7 +167,10 @@ export class MongoDbAction extends ActionsBase {
 		}
 	}
 
-	async beginTransaction(id: Id): Promise<TransactionHandle> {
+	async beginTransaction(
+		id: Id,
+		_collections: string[],
+	): Promise<TransactionHandle> {
 		if (this._session)
 			throw new TransactionError("transaction already active", {
 				code: ErrorCodes.TRANSACTION_FAILED,
@@ -221,8 +224,12 @@ export class MongoDbAction extends ActionsBase {
 		this._session = null;
 	}
 
+	_txSession(transaction?: TransactionHandle): ClientSession | undefined {
+		return transaction?._adapterData as ClientSession | undefined;
+	}
+
 	async createIndex(config: VQueryT.CreateIndex) {
-		const { collection, index } = config;
+		const { collection, index, transaction } = config;
 		const { fields, opts } = index;
 		const coll = this._getCollection(collection);
 		const keys: Record<string, 1> = {};
@@ -232,15 +239,18 @@ export class MongoDbAction extends ActionsBase {
 		await coll.createIndex(keys, {
 			unique: opts?.unique,
 			name: opts?.name,
+			session: this._txSession(transaction),
 		});
 	}
 
 	async removeIndex(config: VQueryT.RemoveIndex) {
-		const { collection, index } = config;
+		const { collection, index, transaction } = config;
 		const { fields, opts } = index;
 		const coll = this._getCollection(collection);
 		const indexName = opts?.name || `idx_${collection}_${fields.join("_")}`;
-		await coll.dropIndex(indexName);
+		await coll.dropIndex(indexName, {
+			session: this._txSession(transaction),
+		});
 	}
 
 	async count(config: VQueryT.Count): Promise<number> {
