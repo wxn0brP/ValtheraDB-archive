@@ -22,19 +22,19 @@
         "build": "tsc && tsc-alias"
     },
     "dependencies": {
-        "@wxn0brp/db-core": "^0.12.10"
+        "@wxn0brp/db-core": "^0.12.20"
     },
     "devDependencies": {
         "@types/better-sqlite3": "^9.6.0",
         "@types/bun": "*",
         "@types/node": "*",
         "@wxn0brp/biome": "*",
-        "better-sqlite3": "^13.0.3",
+        "better-sqlite3": "^13.2.0",
         "tsc-alias": "^1",
         "typescript": "^7"
     },
     "peerDependencies": {
-        "better-sqlite3": "^13.0.3"
+        "better-sqlite3": "^13.2.0"
     },
     "peerDependenciesMeta": {
         "better-sqlite3": {

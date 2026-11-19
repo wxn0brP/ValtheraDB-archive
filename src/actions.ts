@@ -1,5 +1,5 @@
 import { Id } from "@wxn0brp/db-core";
-import { ActionsBase } from "@wxn0brp/db-core/base/actions";
+import { AdapterBase } from "@wxn0brp/db-core/base/adapter";
 import { AdapterError, QueryValidationError } from "@wxn0brp/db-core/errors";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { TransactionHandle } from "@wxn0brp/db-core/types/transaction";
@@ -13,7 +13,7 @@ import { update } from "./update";
 import { computeAffinity, execStmt, qid } from "./utils";
 import { version } from "./version";
 
-export class SQLiteValthera extends ActionsBase {
+export class SQLiteValthera extends AdapterBase {
 	_inited = true;
 	_stmtCache = new Map<string, VStatement>();
 	_stmtCacheKeys: string[] = [];
@@ -241,7 +241,10 @@ export class SQLiteValthera extends ActionsBase {
 		return true;
 	}
 
-	async beginTransaction(id: Id): Promise<TransactionHandle> {
+	async beginTransaction(
+		id: Id,
+		_collections: string[],
+	): Promise<TransactionHandle> {
 		await this._waitForTx();
 		const stmt = await this._prepare("BEGIN");
 		await execStmt(stmt, "run");
@@ -264,7 +267,7 @@ export class SQLiteValthera extends ActionsBase {
 	}
 
 	async createIndex(config: VQueryT.CreateIndex) {
-		await this._waitForTx();
+		if (!config.transaction) await this._waitForTx();
 		const { collection, index } = config;
 		const { fields, opts } = index;
 
@@ -278,7 +281,7 @@ export class SQLiteValthera extends ActionsBase {
 	}
 
 	async removeIndex(config: VQueryT.RemoveIndex) {
-		await this._waitForTx();
+		if (!config.transaction) await this._waitForTx();
 		const { collection, index } = config;
 		const { fields, opts } = index;
 
@@ -296,7 +299,7 @@ export class SQLiteValthera extends ActionsBase {
 		const affinities = await this._getColumnAffinities(collection);
 		const where = buildWhere(search, affinities);
 
-		if (where.postFilter) {
+		if (where.postFilter || where.unhandledOps) {
 			return (await this.find(config as VQueryT.Find)).length;
 		}
 

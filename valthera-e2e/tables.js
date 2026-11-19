@@ -23,4 +23,10 @@ export const TABLES = [
         settings,
         text TEXT
     )`,
+	`CREATE TABLE projection (
+        _id TEXT PRIMARY KEY,
+        profile,
+        users,
+        secret
+    )`,
 ];

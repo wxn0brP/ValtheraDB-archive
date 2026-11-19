@@ -50,6 +50,13 @@ export async function update(
 			? tryBuildSimpleUpdate(updater as any, key, affinities)
 			: null;
 		if (simpleUpdateSql) {
+			const updatedRows = matched.map(row => {
+				const pk = row[key];
+				const newData = updateObj(query, row) as Data;
+				if (newData[key] !== pk) newData[key] = pk;
+				return newData as DataInternal;
+			});
+
 			await slv._ensureColumns(collection, simpleUpdateSql.columns);
 
 			const sql = `UPDATE ${qid(collection)} SET ${simpleUpdateSql.set} WHERE ${where.sql}`;
@@ -60,12 +67,7 @@ export async function update(
 			const stmt = await slv._prepare(sql);
 			await execStmt(stmt, "run", ...values);
 
-			return matched.map(row => {
-				const pk = row[key];
-				const newData = updateObj(query, row) as Data;
-				if (newData[key] !== pk) newData[key] = pk;
-				return newData as DataInternal;
-			});
+			return updatedRows;
 		}
 	}
 
@@ -115,7 +117,7 @@ async function updateOne(
 	}
 
 	for (const k of beforeKeys) {
-		if (k === key || k in newData) continue;
+		if (k === key || Object.hasOwn(newData, k)) continue;
 		columns.push(k);
 		setClauses.push(`${qid(k)} = NULL`);
 	}
@@ -217,7 +219,8 @@ function tryBuildSimpleUpdate(
 
 function incDecClause(field: string, op: "+" | "-"): string {
 	const f = qid(field);
-	return `${f} = CASE WHEN ${f} IS NULL THEN ? WHEN typeof(${f}) IN ('integer','real') THEN ${f} ${op} ? ELSE ${f} END`;
+	const init = op === "-" ? "-?" : "?";
+	return `${f} = CASE WHEN ${f} IS NULL THEN ${init} WHEN typeof(${f}) IN ('integer','real') THEN ${f} ${op} ? ELSE ${f} END`;
 }
 
 function collectIncDecFields(updater: Record<string, any>): string[] {

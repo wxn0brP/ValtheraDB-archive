@@ -1,3 +1,4 @@
+import { QueryValidationError } from "@wxn0brp/db-core/errors";
 import { hasFieldsAdvanced } from "@wxn0brp/db-core/utils/hasFieldsAdvanced";
 import { PUSHABLE_OPS } from "./const";
 import { AffinityMap } from "./types";
@@ -7,18 +8,13 @@ export interface WhereResult {
 	sql: string;
 	values: any[];
 	postFilter?: (row: any) => boolean;
+	unhandledOps?: boolean;
 }
 
 const FALSE_SQL = "1 = 0";
 
-function isMatchAllCondition(cond: any): boolean {
-	return (
-		cond === undefined ||
-		cond === null ||
-		(typeof cond === "object" &&
-			!Array.isArray(cond) &&
-			Object.keys(cond).length === 0)
-	);
+function isMatchAllCondition(cond: any) {
+	return typeof cond === "object" && Object.keys(cond).length === 0;
 }
 
 export function buildWhere(search: any, affinities: AffinityMap): WhereResult {
@@ -65,18 +61,15 @@ export function buildWhere(search: any, affinities: AffinityMap): WhereResult {
 	const clauses: string[] = [];
 	const allValues: any[] = [];
 	const postFilters: ((row: any) => boolean)[] = [];
+	let unhandledOps = false;
 
 	for (const [key, value] of Object.entries(flatFields)) {
 		if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-			postFilters.push(row => {
-				try {
-					return hasFieldsAdvanced(row, {
-						[key]: value,
-					} as any);
-				} catch {
-					return false;
-				}
-			});
+			postFilters.push(row =>
+				hasFieldsAdvanced(row, {
+					[key]: value,
+				} as any),
+			);
 		} else if (value === undefined) {
 			postFilters.push(() => false);
 		} else {
@@ -89,36 +82,39 @@ export function buildWhere(search: any, affinities: AffinityMap): WhereResult {
 		const subsetSearch = {
 			$subset: $fields["$subset"],
 		};
-		postFilters.push(row => {
-			try {
-				return hasFieldsAdvanced(row, subsetSearch as any);
-			} catch {
-				return false;
-			}
-		});
+		postFilters.push(row => hasFieldsAdvanced(row, subsetSearch as any));
 		delete $fields["$subset"];
 	}
 
 	if ("$not" in $fields) {
-		const notResult = buildWhere($fields["$not"], affinities);
-		if (notResult.sql && !notResult.postFilter) {
-			clauses.push(`NOT (${notResult.sql})`);
+		const innerSearch = $fields["$not"];
+		if (
+			typeof innerSearch !== "object" ||
+			innerSearch === null ||
+			Array.isArray(innerSearch)
+		)
+			throw new QueryValidationError("Fields must be an object", {
+				op: "search",
+				key: "$not",
+			});
+		const notResult = buildWhere(innerSearch, affinities);
+		if (notResult.sql && !notResult.postFilter && !notResult.unhandledOps) {
+			clauses.push(`COALESCE(NOT (${notResult.sql}), 1)`);
 			allValues.push(...notResult.values);
 		} else {
-			const innerSearch = $fields["$not"];
-			postFilters.push(row => {
-				try {
-					return !hasFieldsAdvanced(row, innerSearch);
-				} catch {
-					return false;
-				}
-			});
+			postFilters.push(row => !hasFieldsAdvanced(row, innerSearch));
 		}
 		delete $fields["$not"];
 	}
 
 	if ("$and" in $fields) {
+		if (!Array.isArray($fields["$and"]))
+			throw new QueryValidationError("$and must be an array", {
+				op: "search",
+				key: "$and",
+			});
 		const andResult = buildAnd($fields["$and"], affinities);
+		if (andResult.unhandledOps) unhandledOps = true;
 		if (andResult.sql) {
 			clauses.push(`(${andResult.sql})`);
 			allValues.push(...andResult.values);
@@ -130,7 +126,13 @@ export function buildWhere(search: any, affinities: AffinityMap): WhereResult {
 	}
 
 	if ("$or" in $fields) {
+		if (!Array.isArray($fields["$or"]))
+			throw new QueryValidationError("$or must be an array", {
+				op: "search",
+				key: "$or",
+			});
 		const orResult = buildOr($fields["$or"], affinities);
+		if (orResult.unhandledOps) unhandledOps = true;
 		if (orResult.sql) {
 			clauses.push(`(${orResult.sql})`);
 			allValues.push(...orResult.values);
@@ -142,7 +144,14 @@ export function buildWhere(search: any, affinities: AffinityMap): WhereResult {
 	}
 
 	for (const [opKey, fieldMap] of Object.entries($fields)) {
-		if (typeof fieldMap !== "object" || fieldMap === null) continue;
+		if (
+			typeof fieldMap !== "object" ||
+			fieldMap === null ||
+			Array.isArray(fieldMap)
+		) {
+			unhandledOps = true;
+			continue;
+		}
 
 		for (const [field, value] of Object.entries(fieldMap)) {
 			let pushed = false;
@@ -162,17 +171,13 @@ export function buildWhere(search: any, affinities: AffinityMap): WhereResult {
 			}
 
 			if (!pushed) {
-				postFilters.push(row => {
-					try {
-						return hasFieldsAdvanced(row, {
-							[opKey]: {
-								[field]: value,
-							},
-						} as any);
-					} catch {
-						return false;
-					}
-				});
+				postFilters.push(row =>
+					hasFieldsAdvanced(row, {
+						[opKey]: {
+							[field]: value,
+						},
+					} as any),
+				);
 			}
 		}
 	}
@@ -186,23 +191,27 @@ export function buildWhere(search: any, affinities: AffinityMap): WhereResult {
 		sql: clauses.join(" AND "),
 		values: allValues,
 		postFilter,
+		unhandledOps,
 	};
 }
 
 function buildAnd(conditions: any[], affinities: AffinityMap): WhereResult {
-	if (!Array.isArray(conditions)) {
-		return {
-			sql: FALSE_SQL,
-			values: [],
-		};
-	}
-
 	const clauses: string[] = [];
 	const allValues: any[] = [];
 	const postFilters: ((row: any) => boolean)[] = [];
+	let unhandledOps = false;
 
 	for (const condition of conditions) {
+		if (
+			condition === null ||
+			typeof condition !== "object" ||
+			Array.isArray(condition)
+		)
+			throw new QueryValidationError("Fields must be an object", {
+				op: "search",
+			});
 		const result = buildWhere(condition, affinities);
+		if (result.unhandledOps) unhandledOps = true;
 		if (result.sql) {
 			clauses.push(`(${result.sql})`);
 			allValues.push(...result.values);
@@ -221,15 +230,20 @@ function buildAnd(conditions: any[], affinities: AffinityMap): WhereResult {
 		sql: clauses.join(" AND "),
 		values: allValues,
 		postFilter,
+		unhandledOps,
 	};
 }
 
 function buildOr(conditions: any[], affinities: AffinityMap): WhereResult {
-	if (!Array.isArray(conditions)) {
-		return {
-			sql: FALSE_SQL,
-			values: [],
-		};
+	for (const condition of conditions) {
+		if (
+			condition === null ||
+			typeof condition !== "object" ||
+			Array.isArray(condition)
+		)
+			throw new QueryValidationError("Fields must be an object", {
+				op: "search",
+			});
 	}
 
 	if (conditions.some(isMatchAllCondition)) {
@@ -240,7 +254,8 @@ function buildOr(conditions: any[], affinities: AffinityMap): WhereResult {
 	}
 
 	const results = conditions.map(c => buildWhere(c, affinities));
-	const allFullyPushable = results.every(r => !r.postFilter);
+	const unhandledOps = results.some(r => r.unhandledOps);
+	const allFullyPushable = results.every(r => !r.postFilter && !r.unhandledOps);
 
 	if (allFullyPushable) {
 		const nonEmpty = results.filter(r => r.sql && r.sql !== FALSE_SQL);
@@ -258,14 +273,10 @@ function buildOr(conditions: any[], affinities: AffinityMap): WhereResult {
 	return {
 		sql: "",
 		values: [],
-		postFilter: row => {
-			try {
-				return hasFieldsAdvanced(row, {
-					$or: conditions,
-				} as any);
-			} catch {
-				return false;
-			}
-		},
+		postFilter: row =>
+			hasFieldsAdvanced(row, {
+				$or: conditions,
+			} as any),
+		unhandledOps,
 	};
 }
