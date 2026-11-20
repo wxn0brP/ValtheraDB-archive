@@ -26,6 +26,11 @@ import { sortingEdgeCasesTests } from "./sorting-edge-cases";
 import { transactionTests } from "./transaction";
 import { updateTests } from "./update";
 import { updateOpTests } from "./update-op";
+import { projectionEdgeTests } from "./projection-edge";
+import { queryPipelineTests } from "./query-pipeline";
+import { updateEdgeTests } from "./update-edge";
+import { collectionEdgeTests } from "./collection-edge";
+import { transactionEdgeTests } from "./transaction-edge";
 
 export const tests: TestDefinition[] = [
 	...initTests,
@@ -55,4 +60,9 @@ export const tests: TestDefinition[] = [
 	...countTests,
 	...capabilitiesTests,
 	...errorsTests,
+	...projectionEdgeTests,
+	...queryPipelineTests,
+	...updateEdgeTests,
+	...collectionEdgeTests,
+	...transactionEdgeTests,
 ];

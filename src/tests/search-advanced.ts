@@ -103,7 +103,7 @@ export const searchAdvancedTests: TestDefinition[] = [
 			await db.add({
 				collection: "items",
 				data: {
-					name: "hello world",
+					name: "HELLO world",
 				},
 			});
 			await db.add({
@@ -122,13 +122,13 @@ export const searchAdvancedTests: TestDefinition[] = [
 				collection: "items",
 				search: {
 					$regex: {
-						name: "^h",
+						name: /^hello/i,
 					},
 				},
 			});
 			if (results.length !== 1)
 				throw new Error(
-					"$regex with anchors: expected 1 result, got: " + results.length,
+					"$regex with i flag: expected 1 result, got: " + results.length,
 				);
 		},
 	},

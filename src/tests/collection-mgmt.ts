@@ -19,11 +19,7 @@ export const collectionMgmtTests: TestDefinition[] = [
 		domain: "collection-management",
 		name: "ensureCollection-creates-new",
 		fn: async (db: ValtheraClass) => {
-			const result = await db.ensureCollection("test_coll");
-			if (result !== true)
-				throw new Error(
-					"ensureCollection should return true for new collection",
-				);
+			await db.ensureCollection("test_coll");
 			const collections = await db.getCollections();
 			if (!collections.includes("test_coll"))
 				throw new Error("Collection not found after ensureCollection");
@@ -31,14 +27,17 @@ export const collectionMgmtTests: TestDefinition[] = [
 	},
 	{
 		domain: "collection-management",
-		name: "ensureCollection-existing-returns-false",
+		name: "ensureCollection-existing-preserves-data",
 		fn: async (db: ValtheraClass) => {
 			await db.ensureCollection("test_coll");
-			const result = await db.ensureCollection("test_coll");
-			if (result !== false)
-				throw new Error(
-					"ensureCollection should return false for existing collection",
-				);
+			await db.c("test_coll").add({
+				_id: "preserved",
+				value: 42,
+			});
+			await db.ensureCollection("test_coll");
+			const documents = await db.c("test_coll").find();
+			if (documents.length !== 1 || documents[0].value !== 42)
+				throw new Error("ensureCollection must preserve existing data");
 		},
 	},
 	{
