@@ -37,8 +37,7 @@ export const countTests: TestDefinition[] = [
 				search: {},
 			});
 			if (count < beforeCount) throw new Error("Count should be consistent");
-			if (count < 3)
-				throw new Error("Expected at least 3 documents, got: " + count);
+			if (count !== 3) throw new Error("Expected 3 documents, got: " + count);
 		},
 	},
 	{
@@ -73,8 +72,7 @@ export const countTests: TestDefinition[] = [
 					status: "fruit",
 				},
 			});
-			if (count < 2)
-				throw new Error("Expected at least 2 fruits, got: " + count);
+			if (count !== 2) throw new Error("Expected 2 fruits, got: " + count);
 		},
 	},
 	{
@@ -263,10 +261,8 @@ export const countTests: TestDefinition[] = [
 					},
 				},
 			});
-			if (count < 2)
-				throw new Error(
-					"Expected at least 2 items with val > 10, got: " + count,
-				);
+			if (count !== 2)
+				throw new Error("Expected 2 items with val > 10, got: " + count);
 		},
 	},
 	{
@@ -295,19 +291,282 @@ export const countTests: TestDefinition[] = [
 				collection: "items",
 				search: {},
 			});
-			if (count < 4)
-				throw new Error(
-					"Expected at least 4 items after bulkAdd, got: " + count,
-				);
+			if (count !== 4)
+				throw new Error("Expected 4 items after bulkAdd, got: " + count);
 			count = await db.count({
 				collection: "items",
 				search: {
 					status: "a",
 				},
 			});
-			if (count < 2)
+			if (count !== 2)
+				throw new Error("Expected 2 items with status 'a', got: " + count);
+		},
+	},
+	{
+		domain: "crud-read",
+		name: "count-without-search",
+		fn: async (db: ValtheraClass) => {
+			await db.ensureCollection("users");
+			await db.bulkAdd({
+				collection: "users",
+				datas: [
+					{
+						name: "A",
+					},
+					{
+						name: "B",
+					},
+				],
+			});
+			const count = await db.count({
+				collection: "users",
+			});
+			if (count !== 2)
+				throw new Error("Expected 2 documents without search, got: " + count);
+		},
+	},
+	{
+		domain: "crud-read",
+		name: "count-with-logical-operators",
+		fn: async (db: ValtheraClass) => {
+			await db.ensureCollection("items");
+			await db.bulkAdd({
+				collection: "items",
+				datas: [
+					{
+						name: "alpha",
+						status: "active",
+						score: 1,
+						tags: [
+							"a",
+						],
+					},
+					{
+						name: "beta",
+						status: "inactive",
+						score: 2,
+						tags: [
+							"b",
+						],
+					},
+					{
+						name: "gamma",
+						status: "active",
+						score: 3,
+					},
+				],
+			});
+
+			const cases: Array<
+				[
+					string,
+					any,
+					number,
+				]
+			> = [
+				[
+					"$or",
+					{
+						$or: [
+							{
+								status: "active",
+							},
+							{
+								name: "beta",
+							},
+						],
+					},
+					3,
+				],
+				[
+					"$and",
+					{
+						$and: [
+							{
+								status: "active",
+							},
+							{
+								$gt: {
+									score: 1,
+								},
+							},
+						],
+					},
+					1,
+				],
+				[
+					"$not",
+					{
+						$not: {
+							status: "active",
+						},
+					},
+					1,
+				],
+				[
+					"$regex",
+					{
+						$regex: {
+							name: /^a/,
+						},
+					},
+					1,
+				],
+				[
+					"$in",
+					{
+						$in: {
+							status: [
+								"active",
+								"inactive",
+							],
+						},
+					},
+					3,
+				],
+				[
+					"$exists true",
+					{
+						$exists: {
+							tags: true,
+						},
+					},
+					2,
+				],
+				[
+					"$exists false",
+					{
+						$exists: {
+							tags: false,
+						},
+					},
+					1,
+				],
+			];
+
+			for (const [name, search, expected] of cases) {
+				const count = await db.count({
+					collection: "items",
+					search,
+				});
+				if (count !== expected)
+					throw new Error(
+						`count with ${name}: expected ${expected}, got ${count}`,
+					);
+			}
+		},
+	},
+	{
+		domain: "crud-read",
+		name: "count-ignores-find-options",
+		fn: async (db: ValtheraClass) => {
+			await db.ensureCollection("items");
+			await db.bulkAdd({
+				collection: "items",
+				datas: [
+					{
+						name: "alpha",
+						value: 1,
+					},
+					{
+						name: "alps",
+						value: 2,
+					},
+					{
+						name: "beta",
+						value: 3,
+					},
+				],
+			});
+			const count = await db.count({
+				collection: "items",
+				search: {
+					$regex: {
+						name: /^al/,
+					},
+				},
+				dbFindOpts: {
+					limit: 1,
+					offset: 1,
+					sortBy: "value",
+					sortAsc: false,
+					groupBy: "value",
+				},
+			} as any);
+			if (count !== 2)
 				throw new Error(
-					"Expected at least 2 items with status 'a', got: " + count,
+					"count must ignore find options, expected 2, got: " + count,
+				);
+		},
+	},
+	{
+		domain: "crud-read",
+		name: "count-rejects-function-search",
+		fn: async (db: ValtheraClass) => {
+			await db.ensureCollection("items");
+			await db.add({
+				collection: "items",
+				data: {
+					value: 1,
+				},
+			});
+
+			let caught: any;
+			try {
+				await db.count({
+					collection: "items",
+					search: (() => true) as any,
+				});
+			} catch (err) {
+				caught = err;
+			}
+			if (caught?.name !== "QueryValidationError")
+				throw new Error(
+					"count with function search must throw QueryValidationError, got: " +
+						(caught?.name ?? "no error"),
+				);
+		},
+	},
+	{
+		domain: "crud-read",
+		name: "count-matches-find-on-missing-collection",
+		fn: async (db: ValtheraClass) => {
+			const probe = async (fn: () => Promise<unknown>) => {
+				try {
+					return {
+						ok: true,
+						value: await fn(),
+					};
+				} catch {
+					return {
+						ok: false,
+						value: null,
+					};
+				}
+			};
+
+			const findResult = await probe(() =>
+				db.find({
+					collection: "count_missing_find",
+					search: {},
+				}),
+			);
+			const countResult = await probe(() =>
+				db.count({
+					collection: "count_missing_count",
+				}),
+			);
+
+			if (findResult.ok !== countResult.ok)
+				throw new Error("count and find must agree on missing collections");
+			if (
+				findResult.ok &&
+				Array.isArray(findResult.value) &&
+				findResult.value.length !== countResult.value
+			)
+				throw new Error(
+					"count and find must return the same number for missing collections",
 				);
 		},
 	},
