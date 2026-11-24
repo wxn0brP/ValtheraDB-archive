@@ -316,7 +316,7 @@ describe("SQLiteValthera", () => {
 		]);
 	});
 
-	test("10. empty $or and array search match nothing", async () => {
+	test("10. empty $or matches nothing and invalid array search is rejected", async () => {
 		const { db } = setup(
 			"CREATE TABLE items (_id TEXT PRIMARY KEY, name TEXT)",
 		);
@@ -332,11 +332,11 @@ describe("SQLiteValthera", () => {
 			}),
 		).toHaveLength(0);
 		expect(await items.find({} as any)).toHaveLength(1);
-		expect(
-			await items.find([
+		await expect(
+			items.find([
 				"a",
 			] as any),
-		).toHaveLength(0);
+		).rejects.toThrow("Search must be an object");
 	});
 
 	test("11. logical operators $and/$or/$not", async () => {

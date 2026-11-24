@@ -300,7 +300,14 @@ export class SQLiteAdapter extends AdapterBase {
 		const where = buildWhere(search, affinities);
 
 		if (where.postFilter || where.unhandledOps) {
-			return (await this.find(config as VQueryT.Find)).length;
+			return (
+				await this.find({
+					collection,
+					search: search ?? {},
+					control: config.control,
+					transaction: config.transaction,
+				})
+			).length;
 		}
 
 		const sql = where.sql
