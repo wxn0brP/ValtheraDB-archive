@@ -1,7 +1,8 @@
 import { Id } from "@wxn0brp/db-core";
-import { ActionsBase } from "@wxn0brp/db-core/base/actions";
+import { AdapterBase } from "@wxn0brp/db-core/base/adapter";
+import { AdapterError, QueryValidationError } from "@wxn0brp/db-core/errors";
 import { addId } from "@wxn0brp/db-core/helpers/addId";
-import { genId } from "@wxn0brp/db-core/helpers/gen";
+import { genId } from "@wxn0brp/db-core/helpers/idGen";
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { TransactionHandle } from "@wxn0brp/db-core/types/transaction";
@@ -24,6 +25,7 @@ import {
 	MariaDBValtheraOptions,
 } from "./types";
 import { update } from "./update";
+import { version } from "./version";
 import { createPool } from "./pool";
 
 const DDL_RE = /^\s*(CREATE|ALTER|DROP|TRUNCATE|RENAME)\b/i;
@@ -51,13 +53,17 @@ async function runQuery<T>(
 	if (typeof target.unsafe === "function")
 		return extractRows<T>(await target.unsafe(sql, values));
 
-	throw new Error(
+	throw new AdapterError(
 		"Unsupported MariaDB connection: expected query() or unsafe() method",
+		{
+			op: "query",
+		},
 	);
 }
 
-export class MariaDBValthera extends ActionsBase {
+export class MariaDBValthera extends AdapterBase {
 	_inited = true;
+	version = version;
 	capabilities = {
 		transactions: true,
 		indexes: true,
@@ -213,7 +219,13 @@ export class MariaDBValthera extends ActionsBase {
 		const exists = await this.issetCollection(collection);
 
 		if (!exists && this.mode === "strict")
-			throw new Error(`MariaDB table ${this.table(collection)} does not exist`);
+			throw new QueryValidationError(
+				`MariaDB table ${this.table(collection)} does not exist`,
+				{
+					op: "ensureCollection",
+					collection,
+				},
+			);
 
 		if (!exists) {
 			const primaryKey = this.primaryKey(collection);
@@ -244,7 +256,20 @@ export class MariaDBValthera extends ActionsBase {
 		if (primaryKey === "_id") {
 			await addId(config, this, true);
 		} else if ((data as any)[primaryKey] === undefined) {
-			(data as any)[primaryKey] = genId();
+			const customIdGen = this.adapterOpts.idGen;
+			if (customIdGen) {
+				const ids = await customIdGen(
+					[
+						data,
+					],
+					collection,
+					this,
+					config.transaction,
+				);
+				(data as any)[primaryKey] = ids[0];
+			} else {
+				(data as any)[primaryKey] = genId(this.adapterOpts.idParts);
+			}
 		}
 
 		const originalId = (data as any)[primaryKey] ?? genId();
@@ -310,7 +335,15 @@ export class MariaDBValthera extends ActionsBase {
 		await this.ensureCollection(collection);
 
 		const where = await buildWhere(this, collection, config as VQueryT.Find);
-		if (where.partial) return (await this.find(config as VQueryT.Find)).length;
+		if (where.partial)
+			return (
+				await this.find({
+					collection,
+					search: config.search ?? {},
+					control: config.control,
+					transaction: config.transaction,
+				})
+			).length;
 
 		const rows = await this.query<{
 			count: number | string;
@@ -321,7 +354,10 @@ export class MariaDBValthera extends ActionsBase {
 		return Number(rows[0]?.count ?? 0);
 	}
 
-	async beginTransaction(id: Id): Promise<TransactionHandle> {
+	async beginTransaction(
+		id: Id,
+		_collections: string[],
+	): Promise<TransactionHandle> {
 		await this._waitForTx();
 		const pool = this.db as any;
 		let conn: MariaDBConnection;
@@ -348,7 +384,7 @@ export class MariaDBValthera extends ActionsBase {
 	}
 
 	async createIndex(config: VQueryT.CreateIndex) {
-		await this._waitForTx();
+		if (!config.transaction) await this._waitForTx();
 		const { collection, index } = config;
 		const { fields, opts } = index;
 		const indexName = opts?.name || `idx_${collection}_${fields.join("_")}`;
@@ -360,7 +396,7 @@ export class MariaDBValthera extends ActionsBase {
 	}
 
 	async removeIndex(config: VQueryT.RemoveIndex) {
-		await this._waitForTx();
+		if (!config.transaction) await this._waitForTx();
 		const { collection, index } = config;
 		const { fields, opts } = index;
 		const indexName = opts?.name || `idx_${collection}_${fields.join("_")}`;

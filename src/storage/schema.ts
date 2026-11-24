@@ -1,5 +1,5 @@
 import { serialize } from "v8";
-import type { MariaDBValthera } from "../actions";
+import type { MariaDBValthera } from "../adapter";
 import { decodeValue, isEncodedNull } from "./codec";
 import { columnForField, quoteIdentifier } from "./identifiers";
 import { ColumnInfo, SerializedField } from "./types";

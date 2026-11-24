@@ -1,6 +1,6 @@
 import { ValtheraClass, forgeTypedValthera } from "@wxn0brp/db-core";
 import { Data } from "@wxn0brp/db-core/types/data";
-import { MariaDBValthera } from "./actions";
+import { MariaDBValthera } from "./adapter";
 import { createPool } from "./pool";
 import {
 	MariaDBConnection,

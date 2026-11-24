@@ -1,6 +1,6 @@
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { MariaDBValthera } from "./actions";
+import { MariaDBValthera } from "./adapter";
 import { find } from "./find";
 import { quoteIdentifier } from "./storage/identifiers";
 

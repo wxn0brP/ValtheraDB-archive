@@ -1,5 +1,6 @@
+import { QueryValidationError } from "@wxn0brp/db-core/errors";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import type { MariaDBValthera } from "../actions";
+import type { MariaDBValthera } from "../adapter";
 import { encodeValue } from "./codec";
 import { columnForField, quoteIdentifier } from "./identifiers";
 import { getColumns, isBlobColumn } from "./schema";
@@ -96,12 +97,7 @@ export async function buildWhere(
 ): Promise<WhereResult> {
 	const search = (config as any).search;
 
-	if (
-		!search ||
-		typeof search === "function" ||
-		Array.isArray(search) ||
-		typeof search !== "object"
-	)
+	if (!search || typeof search !== "object" || Array.isArray(search))
 		return {
 			sql: "",
 			values: [],
@@ -125,8 +121,13 @@ export async function buildWhere(
 		const column = columns.get(columnForField(key));
 		if (!column) {
 			if (mv.mode === "strict")
-				throw new Error(
+				throw new QueryValidationError(
 					`MariaDB column ${quoteIdentifier(columnForField(key))} for field "${key}" does not exist in table ${mv.table(collection)}`,
+					{
+						op: "find",
+						collection,
+						field: key,
+					},
 				);
 			partial = true;
 			continue;
@@ -152,7 +153,11 @@ export async function buildWhere(
 	}
 
 	for (const [operator, condition] of Object.entries(search)) {
-		if (!operator.startsWith("$") || !isPlainObject(condition)) continue;
+		if (!operator.startsWith("$")) continue;
+		if (!isPlainObject(condition)) {
+			partial = true;
+			continue;
+		}
 		if (SKIP_OPERATORS.has(operator.toLowerCase())) {
 			partial = true;
 			continue;
@@ -164,8 +169,13 @@ export async function buildWhere(
 			const column = columns.get(columnForField(field));
 			if (!column) {
 				if (mv.mode === "strict")
-					throw new Error(
+					throw new QueryValidationError(
 						`MariaDB column ${quoteIdentifier(columnForField(field))} for field "${field}" does not exist in table ${mv.table(collection)}`,
+						{
+							op: "find",
+							collection,
+							field,
+						},
 					);
 				partial = true;
 				continue;

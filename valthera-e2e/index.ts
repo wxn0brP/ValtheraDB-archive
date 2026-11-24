@@ -1,4 +1,4 @@
-import { MariaDBValthera } from "../src/actions";
+import { MariaDBValthera } from "../src/adapter";
 import { MariaDBConnection, MariaDBDriver } from "../src/types";
 
 const MARIADB_URL =
