@@ -1,6 +1,6 @@
 {
     "name": "@wxn0brp/db-storage-postgresql",
-    "version": "0.0.1",
+    "version": "0.130.0-alpha.0",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "description": "A PostgreSQL storage adapter for the ValtheraDB database library",
