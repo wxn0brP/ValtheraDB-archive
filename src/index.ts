@@ -1,7 +1,7 @@
-import { RemoteActionsBase } from "./actions";
+import { RemoteActionsBase } from "./adapter";
 import { RemoteConfig } from "./remote";
 
-export * from "./actions";
+export * from "./adapter";
 export * from "./regex";
 export * from "./remote";
 export * from "./undefined";
