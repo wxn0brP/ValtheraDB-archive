@@ -1,5 +1,4 @@
 import { QueryValidationError } from "@wxn0brp/db-core/errors";
-import { warnDeprecated } from "@wxn0brp/db-core/utils/deprecation";
 import { isUnsafeKey } from "@wxn0brp/db-core/utils/security";
 
 const JS_FALLBACK_OPS = new Set([
@@ -194,11 +193,6 @@ function translateOperator(
 				target.$regex = value.source;
 				if (value.flags) target.$options = value.flags;
 			} else {
-				if (typeof value === "string")
-					warnDeprecated(
-						"VALTHERA_REGEX_STRING_PATTERN",
-						"$regex with a string pattern is deprecated; pass a RegExp instance instead.",
-					);
 				target.$regex = value;
 			}
 			break;

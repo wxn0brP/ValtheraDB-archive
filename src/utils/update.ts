@@ -1,5 +1,4 @@
 import { QueryValidationError } from "@wxn0brp/db-core/errors";
-import { warnDeprecated } from "@wxn0brp/db-core/utils/deprecation";
 import { hasFieldsAdvanced } from "@wxn0brp/db-core/utils/hasFieldsAdvanced";
 import { isUnsafeKey } from "@wxn0brp/db-core/utils/security";
 import { updateObjectAdvanced } from "@wxn0brp/db-core/utils/updateOperators";
@@ -263,22 +262,8 @@ export function isEmptyUpdate(mu: any): boolean {
 export async function resolveSearch(
 	search: any,
 	coll: Collection,
-	context?: any,
 	opts: any = {},
 ) {
-	if (typeof search === "function") {
-		warnDeprecated(
-			"VALTHERA_FUNCTION_SEARCH",
-			"Function-based search is deprecated; use operator objects or a plugin.",
-		);
-		const all = await coll.find({}, opts).toArray();
-		const filtered = cleanDocs(all).filter((d: any) => search(d, context));
-		return {
-			filter: null,
-			allData: filtered,
-		};
-	}
-
 	const mongoQuery = translateQuery(search);
 
 	if (needsJsFallback(search)) {

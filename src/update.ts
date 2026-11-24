@@ -1,6 +1,5 @@
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { warnDeprecated } from "@wxn0brp/db-core/utils/deprecation";
 import { MongoDbAdapter } from "./adapter";
 import { cleanDocs } from "./utils";
 import {
@@ -14,7 +13,7 @@ import {
 } from "./utils/update";
 
 export async function update(mongo: MongoDbAdapter, query: VQueryT.Update) {
-	const { collection, search, updater, context } = query;
+	const { collection, search, updater } = query;
 	const coll = mongo._getCollection(collection);
 	const opts = mongo._session
 		? {
@@ -22,39 +21,7 @@ export async function update(mongo: MongoDbAdapter, query: VQueryT.Update) {
 			}
 		: {};
 
-	if (typeof updater === "function") {
-		warnDeprecated(
-			"VALTHERA_FUNCTION_UPDATER",
-			"Function-based updater is deprecated; use operator objects.",
-		);
-		const { filter, allData } = await resolveSearch(
-			search,
-			coll,
-			context,
-			opts,
-		);
-		const toUpdate = allData ?? (await coll.find(filter, opts).toArray());
-		const updated = [];
-		for (const doc of cleanDocs(toUpdate)) {
-			const mod = updater(doc, context);
-			if (mod) {
-				await coll.updateOne(
-					{
-						_id: doc._id,
-					},
-					{
-						$set: mod,
-					},
-					opts,
-				);
-				Object.assign(doc, mod);
-			}
-			updated.push(doc);
-		}
-		return updated;
-	}
-
-	const { filter, allData } = await resolveSearch(search, coll, context, opts);
+	const { filter, allData } = await resolveSearch(search, coll, opts);
 
 	if (needsJsUpdater(updater)) {
 		const docs =
@@ -106,7 +73,7 @@ export async function update(mongo: MongoDbAdapter, query: VQueryT.Update) {
 }
 
 export async function updateOne(mongo: MongoDbAdapter, query: VQueryT.Update) {
-	const { collection, search, updater, context } = query;
+	const { collection, search, updater } = query;
 	const coll = mongo._getCollection(collection);
 	const opts = mongo._session
 		? {
@@ -114,43 +81,7 @@ export async function updateOne(mongo: MongoDbAdapter, query: VQueryT.Update) {
 			}
 		: {};
 
-	if (typeof updater === "function") {
-		warnDeprecated(
-			"VALTHERA_FUNCTION_UPDATER",
-			"Function-based updater is deprecated; use operator objects.",
-		);
-		const { filter, allData } = await resolveSearch(
-			search,
-			coll,
-			context,
-			opts,
-		);
-
-		let doc: any;
-		if (allData !== null) {
-			doc = allData[0] ?? null;
-		} else {
-			doc = await coll.findOne(filter, opts);
-		}
-
-		if (!doc) return null;
-		const mod = updater(doc, context);
-		if (mod) {
-			await coll.updateOne(
-				{
-					_id: doc._id,
-				},
-				{
-					$set: mod,
-				},
-				opts,
-			);
-			Object.assign(doc, mod);
-		}
-		return cleanDocs(doc) as DataInternal | null;
-	}
-
-	const { filter, allData } = await resolveSearch(search, coll, context, opts);
+	const { filter, allData } = await resolveSearch(search, coll, opts);
 
 	if (needsJsUpdater(updater)) {
 		const doc =

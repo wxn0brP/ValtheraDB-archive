@@ -5,7 +5,7 @@ import { cleanDocs } from "./utils";
 import { resolveSearch } from "./utils/update";
 
 export async function remove(mongo: MongoDbAdapter, query: VQueryT.Remove) {
-	const { collection, search, context } = query;
+	const { collection, search } = query;
 	const coll = mongo._getCollection(collection);
 	const opts = mongo._session
 		? {
@@ -13,7 +13,7 @@ export async function remove(mongo: MongoDbAdapter, query: VQueryT.Remove) {
 			}
 		: {};
 
-	const { filter, allData } = await resolveSearch(search, coll, context, opts);
+	const { filter, allData } = await resolveSearch(search, coll, opts);
 
 	if (allData !== null) {
 		for (const doc of allData) {
@@ -33,7 +33,7 @@ export async function remove(mongo: MongoDbAdapter, query: VQueryT.Remove) {
 }
 
 export async function removeOne(mongo: MongoDbAdapter, query: VQueryT.Remove) {
-	const { collection, search, context } = query;
+	const { collection, search } = query;
 	const coll = mongo._getCollection(collection);
 	const opts = mongo._session
 		? {
@@ -41,7 +41,7 @@ export async function removeOne(mongo: MongoDbAdapter, query: VQueryT.Remove) {
 			}
 		: {};
 
-	const { filter, allData } = await resolveSearch(search, coll, context, opts);
+	const { filter, allData } = await resolveSearch(search, coll, opts);
 
 	if (allData !== null) {
 		const doc = allData[0] ?? null;

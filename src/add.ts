@@ -16,13 +16,13 @@ export async function add(mongo: MongoDbAdapter, query: VQueryT.Add) {
 			...data,
 			_vdb_no_id: true,
 		};
-		await coll.insertOne(dataToInsert, opts);
+		await coll.insertOne(dataToInsert as any, opts);
 		return data;
 	}
 
 	await addId(query, mongo);
 
-	await coll.insertOne(data, opts);
+	await coll.insertOne(data as any, opts);
 	return data;
 }
 
@@ -46,12 +46,12 @@ export async function bulkAdd(mongo: MongoDbAdapter, query: VQueryT.BulkAdd) {
 						_vdb_no_id: true,
 					},
 		);
-		await coll.insertMany(dataToInsert, opts);
+		await coll.insertMany(dataToInsert as any[], opts);
 		return datas;
 	}
 
 	await addIdBulk(query, mongo);
 
-	await coll.insertMany(datas, opts);
+	await coll.insertMany(datas as any[], opts);
 	return datas;
 }

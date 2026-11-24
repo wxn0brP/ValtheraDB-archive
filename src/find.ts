@@ -1,5 +1,4 @@
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { warnDeprecated } from "@wxn0brp/db-core/utils/deprecation";
 import { findUtil } from "@wxn0brp/db-core/utils/findUtil";
 import { hasFieldsAdvanced } from "@wxn0brp/db-core/utils/hasFieldsAdvanced";
 import { MongoDbAdapter } from "./adapter";
@@ -7,7 +6,7 @@ import { cleanDocs, needsJsFallback, translateQuery } from "./utils";
 import { nativeAggregate } from "./utils/aggregate";
 
 export async function find(mongo: MongoDbAdapter, query: VQueryT.Find) {
-	const { collection, search, dbFindOpts = {}, findOpts, context } = query;
+	const { collection, search, dbFindOpts = {}, findOpts } = query;
 	const coll = mongo._getCollection(collection);
 	const opts = mongo._session
 		? {
@@ -32,8 +31,7 @@ export async function find(mongo: MongoDbAdapter, query: VQueryT.Find) {
 
 	const needsAggregation =
 		min || max || avg || groupBy || count || sum || distinct;
-	const searchIsFunc = typeof search === "function";
-	const needsNativeFallback = !searchIsFunc && !needsJsFallback(search);
+	const needsNativeFallback = !needsJsFallback(search);
 	const canUseNative =
 		needsNativeFallback &&
 		!needsAggregation &&
@@ -69,19 +67,6 @@ export async function find(mongo: MongoDbAdapter, query: VQueryT.Find) {
 		return mongo._applyFindOpts(results, findOpts);
 	}
 
-	if (searchIsFunc) {
-		warnDeprecated(
-			"VALTHERA_FUNCTION_SEARCH",
-			"Function-based search is deprecated; use operator objects or a plugin.",
-		);
-		const all = await coll.find({}, opts).toArray();
-		const filtered = cleanDocs(all).filter((d: any) => search(d, context));
-		const results = await findUtil(query, filtered, [
-			"",
-		]);
-		return mongo._applyFindOpts(results, findOpts);
-	}
-
 	if (needsJsFallback(search)) {
 		const all = await coll.find({}, opts).toArray();
 		const allData = cleanDocs(all).filter((d: any) =>
@@ -103,23 +88,13 @@ export async function find(mongo: MongoDbAdapter, query: VQueryT.Find) {
 }
 
 export async function findOne(mongo: MongoDbAdapter, query: VQueryT.FindOne) {
-	const { collection, search, findOpts, context } = query;
+	const { collection, search, findOpts } = query;
 	const coll = mongo._getCollection(collection);
 	const opts = mongo._session
 		? {
 				session: mongo._session,
 			}
 		: {};
-
-	if (typeof search === "function") {
-		warnDeprecated(
-			"VALTHERA_FUNCTION_SEARCH",
-			"Function-based search is deprecated; use operator objects or a plugin.",
-		);
-		const all = await coll.find({}, opts).toArray();
-		const found = cleanDocs(all).find((d: any) => search(d, context));
-		return mongo._applyFindOpts(found ?? null, findOpts);
-	}
 
 	if (needsJsFallback(search)) {
 		const all = await coll.find({}, opts).toArray();

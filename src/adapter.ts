@@ -262,8 +262,15 @@ export class MongoDbAdapter extends AdapterBase {
 				}
 			: {};
 
-		if (typeof search === "function" || needsJsFallback(search)) {
-			return (await this.find(config as VQueryT.Find)).length;
+		if (needsJsFallback(search)) {
+			return (
+				await this.find({
+					collection,
+					search: search ?? {},
+					control: config.control,
+					transaction: config.transaction,
+				})
+			).length;
 		}
 
 		const mongoQuery = translateQuery(search);

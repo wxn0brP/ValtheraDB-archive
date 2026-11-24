@@ -45,90 +45,6 @@ describe("resolveSearch", () => {
 		},
 	];
 
-	describe("function search", () => {
-		it("1. filters documents by function search", async () => {
-			const search = (d: any) => d.age === 30;
-			const { filter, allData } = await resolveSearch(
-				search,
-				mockCollection(docs),
-			);
-
-			expect(filter).toBeNull();
-			expect(allData).toHaveLength(1);
-			expect(allData![0].name).toBe("Alice");
-		});
-
-		it("2. passes context to search function", async () => {
-			const search = (d: any, ctx: any) => d.age >= ctx.minAge;
-			const { allData } = await resolveSearch(search, mockCollection(docs), {
-				minAge: 30,
-			});
-
-			expect(allData).toHaveLength(2);
-			expect(allData!.map((d: any) => d.name).sort()).toEqual([
-				"Alice",
-				"Charlie",
-			]);
-		});
-
-		it("3. returns empty array when no match", async () => {
-			const search = (d: any) => d.age > 100;
-			const { allData } = await resolveSearch(search, mockCollection(docs));
-
-			expect(allData).toEqual([]);
-		});
-
-		it("4. returns all documents when function matches all", async () => {
-			const search = (d: any) => d.age > 0;
-			const { allData } = await resolveSearch(search, mockCollection(docs));
-
-			expect(allData).toHaveLength(4);
-		});
-
-		it("5. removes _vdb_no_id helper fields", async () => {
-			const docsWithVdb = [
-				{
-					_id: "1",
-					_vdb_no_id: true,
-					name: "Test",
-				},
-			];
-			const search = (d: any) => true;
-			const { allData } = await resolveSearch(
-				search,
-				mockCollection(docsWithVdb),
-			);
-
-			expect(allData![0]._id).toBeUndefined();
-			expect(allData![0]._vdb_no_id).toBeUndefined();
-			expect(allData![0].name).toBe("Test");
-		});
-
-		it("6. filters correctly with _vdb_no_id docs mixed in", async () => {
-			const mixedDocs = [
-				{
-					_id: "1",
-					name: "Keep",
-					_vdb_no_id: false,
-				},
-				{
-					_id: "2",
-					name: "Remove",
-					_vdb_no_id: true,
-				},
-			];
-			const search = (d: any) => d.name === "Keep";
-			const { allData } = await resolveSearch(
-				search,
-				mockCollection(mixedDocs),
-			);
-
-			expect(allData).toHaveLength(1);
-			expect(allData![0]._id).toBe("1");
-			expect(allData![0].name).toBe("Keep");
-		});
-	});
-
 	describe("object search with JS fallback", () => {
 		it("1. filters using hasFieldsAdvanced for $subset", async () => {
 			const search = {
@@ -244,14 +160,7 @@ describe("resolveSearch", () => {
 	});
 
 	describe("edge cases", () => {
-		it("1. handles empty collection with function search", async () => {
-			const search = (d: any) => true;
-			const { allData } = await resolveSearch(search, mockCollection([]));
-
-			expect(allData).toEqual([]);
-		});
-
-		it("2. handles empty collection with object search", async () => {
+		it("1. handles empty collection with object search", async () => {
 			const { filter, allData } = await resolveSearch(
 				{
 					name: "X",
@@ -265,7 +174,7 @@ describe("resolveSearch", () => {
 			});
 		});
 
-		it("3. handles empty collection with JS fallback search", async () => {
+		it("2. handles empty collection with JS fallback search", async () => {
 			const search = {
 				$subset: {
 					tags: [
