@@ -12,6 +12,10 @@
         "valthera-e2e": "./src/index.ts",
         "valthera-e2e-node": "./dist/node.js"
     },
+    "files": [
+        "src",
+        "dist"
+    ],
     "author": "wxn0brP",
     "license": "MIT",
     "type": "module",
