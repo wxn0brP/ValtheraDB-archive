@@ -331,7 +331,7 @@ export const countTests: TestDefinition[] = [
 		name: "count-with-logical-operators",
 		fn: async (db: ValtheraClass) => {
 			await db.ensureCollection("items");
-			await db.bulkAdd({
+			await db.bulkAdd<any>({
 				collection: "items",
 				datas: [
 					{

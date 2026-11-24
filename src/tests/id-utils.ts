@@ -59,7 +59,7 @@ export const idUtilsTests: TestDefinition[] = [
 			});
 			if (doc._id !== 42)
 				throw new Error("number id: expected _id 42, got " + doc._id);
-			const found = await db.findOne({
+			const found = await db.findOne<any>({
 				collection: "items",
 				search: {
 					_id: 42,
