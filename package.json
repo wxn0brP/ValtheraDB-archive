@@ -12,7 +12,7 @@
     "license": "MIT",
     "type": "module",
     "bin": {
-        "valthera-bench": "src/local.ts"
+        "valthera-bench": "src/local/index.ts"
     },
     "scripts": {
         "build": "tsc && tsc-alias",
