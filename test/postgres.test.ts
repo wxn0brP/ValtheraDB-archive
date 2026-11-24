@@ -2,7 +2,7 @@ import { ValtheraClass } from "@wxn0brp/db-core";
 import { describe, expect, it } from "bun:test";
 import { Pool } from "pg";
 import { createPostgreSQLValthera } from "../src";
-import { PostgreSQLValthera } from "../src/actions";
+import { PostgreSQLValthera } from "../src/adapter";
 
 const DATABASE_URL =
 	process.env.DATABASE_URL ?? "postgresql://localhost:5432/vdb_test";
