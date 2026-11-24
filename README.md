@@ -7,11 +7,25 @@ See [Page](https://wxn0brp.github.io/ValtheraDB-benchmark) for details and visua
 
 ## Local benchmark
 
+### Install
+
+Globally, to get the `valthera-bench` command:
+
+```bash
+bun add -g @wxn0brp/db-benchmark
+# or
+npm install -g @wxn0brp/db-benchmark
+```
+### Usage
+
 Run the benchmark against an adapter straight from the terminal:
 
 ```bash
 valthera-bench [adapter] [options]
 ```
+
+`adapter` is a path to a module whose default export is a factory returning a
+ValtheraDB adapter (default: `./valthera-e2e/index.ts`).
 
 Options:
 
