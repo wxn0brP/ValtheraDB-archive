@@ -1,5 +1,5 @@
 import { Pool } from "pg";
-import { PostgreSQLValthera } from "../src/actions";
+import { PostgreSQLValthera } from "../src/adapter";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL)
