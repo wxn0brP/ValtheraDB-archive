@@ -1,6 +1,6 @@
 import { forgeTypedValthera, ValtheraClass } from "@wxn0brp/db-core";
 import { Data } from "@wxn0brp/db-core/types/data";
-import { PostgreSQLValthera } from "./actions";
+import { PostgreSQLValthera } from "./adapter";
 import { PostgreSQLValtheraOptions, SupportedPostgreSQL } from "./types";
 
 export function createPostgreSQLValthera<T extends Record<string, Data> = {}>(

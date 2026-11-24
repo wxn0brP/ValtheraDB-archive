@@ -1,7 +1,7 @@
 import { Data, DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { updateObj } from "@wxn0brp/db-core/utils/process";
-import { PostgreSQLValthera } from "./actions";
+import { PostgreSQLValthera } from "./adapter";
 import { find } from "./find";
 import { encodeValue, serializeData } from "./storage/codec";
 import { quoteIdentifier, sqlColumnForField } from "./storage/identifiers";

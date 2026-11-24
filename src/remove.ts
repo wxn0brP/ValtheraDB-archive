@@ -1,6 +1,6 @@
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { PostgreSQLValthera } from "./actions";
+import { PostgreSQLValthera } from "./adapter";
 import { find } from "./find";
 import { quoteIdentifier } from "./storage/identifiers";
 import { POSTGRES_STORAGE_ID } from "./types";

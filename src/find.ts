@@ -1,8 +1,8 @@
 import { Data } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { findUtil } from "@wxn0brp/db-core/utils/action";
+import { findUtil } from "@wxn0brp/db-core/utils/findUtil";
 import { findObj } from "@wxn0brp/db-core/utils/process";
-import { PostgreSQLValthera } from "./actions";
+import { PostgreSQLValthera } from "./adapter";
 import { rowToData } from "./storage/row";
 import { getColumns } from "./storage/schema";
 import { buildWhere } from "./storage/where";

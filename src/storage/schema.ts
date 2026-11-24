@@ -1,7 +1,7 @@
 import { QueryValidationError } from "@wxn0brp/db-core/errors";
 import { Data } from "@wxn0brp/db-core/types/data";
 import { serialize } from "v8";
-import { PostgreSQLValthera } from "../actions";
+import { PostgreSQLValthera } from "../adapter";
 import { isEncodedNull, serializeData } from "./codec";
 import {
 	columnForField,
@@ -85,6 +85,45 @@ function compatibleType(existing: ColumnInfo | undefined, sqlType: string) {
 	return existing.udtName === udtNameForSqlType(sqlType);
 }
 
+function resolveBatchTypes(fields: SerializedField[]) {
+	const groups = new Map<string, SerializedField[]>();
+
+	for (const field of fields) {
+		const column = columnForField(field.key);
+		const group = groups.get(column);
+		if (!group) {
+			groups.set(column, [
+				field,
+			]);
+			continue;
+		}
+		group.push(field);
+	}
+
+	for (const group of groups.values()) {
+		const typed = group.filter(field => !isEncodedNull(field.value));
+		if (!typed.length) continue;
+
+		const types = new Set(typed.map(field => field.sqlType));
+		if (types.size > 1) {
+			for (const field of typed) {
+				if (field.sqlType === "BYTEA") continue;
+				field.value = serialize(field.value);
+				field.sqlType = "BYTEA";
+			}
+			continue;
+		}
+
+		const sqlType = typed[0].sqlType;
+		if (sqlType === "BYTEA") continue;
+		for (const field of group) {
+			if (!isEncodedNull(field.value)) continue;
+			field.value = null;
+			field.sqlType = sqlType;
+		}
+	}
+}
+
 export async function ensureColumns(
 	pgv: PostgreSQLValthera,
 	collection: string,
@@ -92,6 +131,7 @@ export async function ensureColumns(
 	columns?: Map<string, ColumnInfo>,
 ) {
 	columns ??= await getColumns(pgv, collection);
+	resolveBatchTypes(fields);
 
 	for (const field of fields) {
 		const column = columnForField(field.key);
@@ -131,7 +171,8 @@ export async function ensureColumns(
 			if (Number(nonNull.rows[0]?.count || 0) === 0) {
 				await pgv.query(
 					`ALTER TABLE ${pgv.table(collection)}
-					 ALTER COLUMN ${sqlColumnForField(field.key)} TYPE ${field.sqlType}`,
+					 ALTER COLUMN ${sqlColumnForField(field.key)} TYPE ${field.sqlType}
+					 USING NULL`,
 				);
 				columns.set(column, {
 					name: column,

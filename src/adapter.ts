@@ -1,5 +1,5 @@
 import { Id } from "@wxn0brp/db-core";
-import { ActionsBase } from "@wxn0brp/db-core/base/actions";
+import { AdapterBase } from "@wxn0brp/db-core/base/adapter";
 import {
 	AdapterCloseError,
 	AdapterError,
@@ -9,7 +9,7 @@ import {
 	TransactionError,
 } from "@wxn0brp/db-core/errors";
 import { addId, addIdBulk } from "@wxn0brp/db-core/helpers/addId";
-import { genId } from "@wxn0brp/db-core/helpers/gen";
+import { genId } from "@wxn0brp/db-core/helpers/idGen";
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { TransactionHandle } from "@wxn0brp/db-core/types/transaction";
@@ -27,7 +27,7 @@ import {
 import { update } from "./update";
 import { version } from "./version";
 
-export class PostgreSQLValthera extends ActionsBase {
+export class PostgreSQLValthera extends AdapterBase {
 	_inited = true;
 	version = version;
 	capabilities = {
@@ -382,6 +382,17 @@ export class PostgreSQLValthera extends ActionsBase {
 		const { collection } = config;
 		await this.ensureCollection(collection);
 		const where = await buildWhere(this, collection, config as VQueryT.Find);
+		if (where.partial) {
+			return (
+				await this.find({
+					collection,
+					search: config.search ?? {},
+					control: config.control,
+					transaction: config.transaction,
+				})
+			).length;
+		}
+
 		const result = await this.query<{
 			count: string;
 		}>(
