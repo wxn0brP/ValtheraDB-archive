@@ -18,7 +18,6 @@ export interface Remote extends RemoteOptions {
 export interface RequestData {
 	auth?: string;
 	db?: string;
-	keys?: string[][];
 	undefinedPaths?: string[][];
 	query?: Record<string, any>;
 }

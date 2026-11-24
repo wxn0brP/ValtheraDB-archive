@@ -1,7 +1,6 @@
 import { errorFromWire } from "@wxn0brp/db-core/errors";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { updateFindObject } from "@wxn0brp/db-core/utils/projection";
-import { serializeFunctions } from "./function";
 import { parseRemote } from "./parse";
 import { serializeRegex } from "./regex";
 import { Remote, RemoteConfig, RequestData } from "./remote";
@@ -48,21 +47,18 @@ export class BaseRemote {
 	}
 
 	async _request<T>(type: string, query?: any) {
-		const processed = serializeFunctions(query);
 		const undefinedPaths = findUndefinedPaths(query);
 		const url = new URL(this.remote.url);
 
-		const payload = processed.data;
 		const data: RequestData = {
 			db: url.username,
 			auth: url.password,
-			query: payload?.search
+			query: query?.search
 				? {
-						...payload,
-						search: serializeRegex(payload.search),
+						...query,
+						search: serializeRegex(query.search),
 					}
-				: payload,
-			keys: processed.keys,
+				: query,
 			undefinedPaths,
 			...(this.remote.body || {}),
 		};

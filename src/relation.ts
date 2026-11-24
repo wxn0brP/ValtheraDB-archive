@@ -28,8 +28,7 @@ export class RelationClient {
 			config[name] = remote.url.toString();
 		});
 
-		if (typeof params[1] === "function") params[1] = params[1].toString();
-		else if (params[1] && typeof params[1] === "object")
+		if (params[1] && typeof params[1] === "object")
 			params[1] = serializeRegex(params[1]);
 
 		url.pathname = url.pathname + "/r/" + type;
