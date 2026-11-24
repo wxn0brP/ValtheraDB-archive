@@ -251,7 +251,7 @@ export const operatorInteractionsTests: TestDefinition[] = [
 						},
 						{
 							$regex: {
-								name: "^J",
+								name: /^J/,
 							},
 						},
 					],

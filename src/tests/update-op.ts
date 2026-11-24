@@ -130,35 +130,6 @@ export const updateOpTests: TestDefinition[] = [
 	},
 	{
 		domain: "update-operators",
-		name: "update-via-function",
-		fn: async (db: ValtheraClass) => {
-			await db.ensureCollection("items");
-			await db.add({
-				collection: "items",
-				data: {
-					_id: "i1",
-					val: 10,
-				},
-			});
-			const updateFn = (doc: any) => {
-				doc.val = doc.val * 2;
-				return doc;
-			};
-			const result = await db.updateOne<any>({
-				collection: "items",
-				search: {
-					_id: "i1",
-				},
-				updater: updateFn,
-			});
-			if (!result || result.val !== 20)
-				throw new Error(
-					"Function update: expected val=20, got: " + result?.val,
-				);
-		},
-	},
-	{
-		domain: "update-operators",
 		name: "dec-operator",
 		fn: async (db: ValtheraClass) => {
 			await db.ensureCollection("items");

@@ -214,34 +214,6 @@ export const searchOpTests: TestDefinition[] = [
 	},
 	{
 		domain: "search-operators",
-		name: "search-via-function",
-		fn: async (db: ValtheraClass) => {
-			await db.ensureCollection("items");
-			await db.add({
-				collection: "items",
-				data: {
-					val: 5,
-				},
-			});
-			await db.add({
-				collection: "items",
-				data: {
-					val: 15,
-				},
-			});
-			const searchFn = (doc: any) => doc.val > 10;
-			const results = await db.find({
-				collection: "items",
-				search: searchFn,
-			});
-			if (results.length !== 1)
-				throw new Error("Function search: expected 1 result");
-			if (results[0].val !== 15)
-				throw new Error("Function search: wrong document returned");
-		},
-	},
-	{
-		domain: "search-operators",
 		name: "comparison-gte",
 		fn: async (db: ValtheraClass) => {
 			await db.ensureCollection("items");
@@ -526,7 +498,7 @@ export const searchOpTests: TestDefinition[] = [
 				collection: "items",
 				search: {
 					$regex: {
-						name: "Jo",
+						name: /Jo/,
 					},
 				},
 			});
@@ -1366,7 +1338,7 @@ export const searchOpTests: TestDefinition[] = [
 				search: {
 					$not: {
 						$regex: {
-							name: "Jo",
+							name: /Jo/,
 						},
 					},
 				},

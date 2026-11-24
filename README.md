@@ -1,6 +1,6 @@
 # @wxn0brp/db-e2e
 
-E2E compliance test suite for ValtheraDB adapters. CLI tool that runs a centralized test suite against any adapter implementing the `ActionsBase` interface.
+E2E compliance test suite for ValtheraDB adapters. CLI tool that runs a centralized test suite against any adapter implementing the `AdapterBase` interface.
 
 ## Overview
 
@@ -39,8 +39,8 @@ valthera-e2e -h
 | `crud-read` | `find`, `findOne` with various search scenarios |
 | `crud-update` | `update`, `updateOne` with match/no-match cases |
 | `crud-remove` | `remove`, `removeOne` with match/no-match cases |
-| `search-operators` | `$gt`, `$lt`, `$in`, `$exists`, `$and`, function-based search |
-| `update-operators` | `$inc`, `$unset`, `$push`, `$merge`, function-based updates |
+| `search-operators` | `$gt`, `$lt`, `$in`, `$exists`, `$and`, `$regex` |
+| `update-operators` | `$inc`, `$unset`, `$push`, `$merge`, `$deepMerge` |
 | `find-options` | `limit`, `sortBy`, `select`, `exclude` |
 | `composite-operations` | `updateOneOrAdd`, `toggleOne` |
 | `edge-cases` | Empty search, special characters, nested objects |
@@ -52,20 +52,20 @@ valthera-e2e -h
 
 ## Adapter Contract
 
-The adapter module must have a **default export** that is an async function returning an `ActionsBase` instance:
+The adapter module must have a **default export** that is an async function returning an `AdapterBase` instance:
 
 ```ts
 // ./valthera-e2e/index.ts
-import { createFileActions } from "@wxn0brp/db-storage-dir";
+import { createFileAdapter } from "@wxn0brp/db-storage-dir";
 
 export default async () => {
-    const actions = createFileActions("/tmp/test-db", { format: "json" });
-    await actions.init();
-    return actions;
+    const adapter = createFileAdapter("/tmp/test-db", { format: "json" });
+    await adapter.init();
+    return adapter;
 };
 ```
 
-The runner wraps the adapter with `new ValtheraClass({ dbAction: adapter })` before passing it to tests. Each test receives a fresh, initialized `ValtheraClass` instance.
+The runner wraps the adapter with `new ValtheraClass({ adapter })` before passing it to tests. Each test receives a fresh, initialized `ValtheraClass` instance.
 
 ## Configuration
 
@@ -75,7 +75,7 @@ Place `valthera-e2e/config.json` next to your adapter file to skip domains or te
 {
     "skip": {
         "domains": ["events"],
-        "tests": ["search-via-function"]
+        "tests": ["regex-operator"]
     }
 }
 ```
