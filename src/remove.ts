@@ -1,8 +1,8 @@
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { AccDBValthera } from ".";
-import { find } from "./find";
-import { escapeValue } from "./utils";
+import type { AccDBValthera } from "./index";
+import { selectMatching } from "./find";
+import { VID, sqlIdent, sqlString } from "./utils";
 
 export async function remove(
 	slv: AccDBValthera,
@@ -11,21 +11,12 @@ export async function remove(
 ) {
 	const { collection } = query;
 
-	const toDelete = await find(slv, {
-		...query,
-		dbFindOpts: {
-			limit: one ? 1 : undefined,
-		},
-	});
+	const rows = await selectMatching(slv, query, one ? 1 : undefined);
 
-	if (!toDelete.length) return [];
-
-	const key = slv.primaryKey[collection] || "_id";
-
-	for (const entry of toDelete)
+	for (const row of rows)
 		await slv.db.query(
-			`DELETE FROM [${collection}] WHERE [${key}] = ${escapeValue(entry[key])}`,
+			`DELETE FROM ${sqlIdent(collection)} WHERE ${sqlIdent(VID)} = ${sqlString(row.vid)}`,
 		);
 
-	return toDelete as DataInternal[];
+	return rows.map(row => row.doc) as DataInternal[];
 }
