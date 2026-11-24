@@ -24,6 +24,9 @@ export interface TestResult {
 	name: string;
 	status: "passed" | "failed" | "skipped";
 	error?: string;
+	errorName?: string;
+	errorStack?: string;
+	source?: "setup" | "test";
 	code?: string;
 	suggestion?: string;
 	duration: number;

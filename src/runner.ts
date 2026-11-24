@@ -1,5 +1,6 @@
 import { isValtheraError, ValtheraClass } from "@wxn0brp/db-core";
 import type { AdapterCapabilities } from "@wxn0brp/db-core";
+import { describeError, formatError } from "./error";
 import { tests } from "./tests";
 import type {
 	AdapterFactory,
@@ -53,7 +54,7 @@ async function getCapabilities(
 		db = await dbFactory();
 		return await db.capabilities();
 	} catch (err) {
-		verbose(`Failed to read adapter capabilities: ${err}`);
+		verbose(`Failed to read adapter capabilities: ${formatError(err)}`);
 		return null;
 	} finally {
 		if (db) await db.close().catch(() => {});
@@ -114,8 +115,10 @@ export async function runTests(
 
 		const start = performance.now();
 		let db: ValtheraClass = null;
+		let source: "setup" | "test" = "setup";
 		try {
 			db = await dbFactory();
+			source = "test";
 			await test.fn(db);
 			const duration = performance.now() - start;
 			results.push({
@@ -128,17 +131,23 @@ export async function runTests(
 			verbose(`  Passed`);
 		} catch (err: any) {
 			const duration = performance.now() - start;
+			const described = describeError(err);
 			results.push({
 				domain: test.domain,
 				name: test.name,
 				status: "failed",
-				error: err?.message ?? String(err),
-				code: isValtheraError(err) ? err.code : undefined,
+				error: described.message,
+				errorName: described.name,
+				errorStack: described.stack,
+				source,
+				code: described.code,
 				suggestion: isValtheraError(err) ? err.suggestion : undefined,
 				duration,
 			});
 			failed++;
-			verbose(`  Failed: ${err?.message ?? String(err)}`);
+			verbose(
+				`  Failed (${source === "test" ? "test fn" : "setup"}): ${formatError(err)}`,
+			);
 		} finally {
 			if (db) await db.close().catch(() => {});
 		}

@@ -57,13 +57,27 @@ export function printResults(result: Awaited<ReturnType<typeof runTests>>) {
 			);
 
 			if (r.status === "failed" && r.error) {
-				console.log(`    ${getColor("failed")}${r.error}\x1b[0m`);
-				if (r.code)
-					console.log(`    ${getColor("failed")}code: ${r.code}\x1b[0m`);
-				if (r.suggestion)
+				const color = getColor("failed");
+				const prefix = r.errorName ? `${r.errorName}: ` : "thrown: ";
+				console.log(`    ${color}${prefix}${r.error}${reset}`);
+
+				if (r.errorStack) {
+					const lines = r.errorStack.split("\n");
+					if (lines[0]?.trim() === `${r.errorName}: ${r.error}`.trim())
+						lines.shift();
+					for (const line of lines) console.log(`    ${color}${line}${reset}`);
+					console.log("");
+				}
+
+				if (r.source)
 					console.log(
-						`    ${getColor("failed")}suggestion: ${r.suggestion}\x1b[0m`,
+						`    ${color}at: ${r.source === "test" ? "test fn" : "adapter setup"}${reset}`,
 					);
+
+				if (r.code) console.log(`    ${color}code: ${r.code}${reset}`);
+				if (r.suggestion)
+					console.log(`    ${color}suggestion: ${r.suggestion}${reset}`);
+				console.log();
 			}
 		}
 
