@@ -1,6 +1,6 @@
 import { ValtheraClass } from "@wxn0brp/db-core";
 import { Collection } from "@wxn0brp/db-core/helpers/collection";
-import type { ActionsBaseInterface } from "@wxn0brp/db-core/types/action";
+import type { AdapterBaseInterface } from "@wxn0brp/db-core/types/adapter";
 import { Data } from "@wxn0brp/db-core/types/data";
 import { ScopeBase } from "./scope";
 
@@ -19,7 +19,7 @@ export interface ResolvedConfig {
 
 export type Adapter = (
 	...args: any[]
-) => Promise<ActionsBaseInterface> | ActionsBaseInterface;
+) => Promise<AdapterBaseInterface> | AdapterBaseInterface;
 
 export type ValtheraLazy<T extends Record<string, Data> = {}> =
 	ValtheraClass & {
