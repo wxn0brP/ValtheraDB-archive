@@ -10,14 +10,14 @@ on:
         default: false
 
 jobs:
-  # adapter-bin:
-  #   uses: ./.github/workflows/adapter-bin.yml
-  #   with:
-  #     skip_commit: ${{ inputs.skip_commit }}
+  adapter-bin:
+    uses: ./.github/workflows/adapter-bin.yml
+    with:
+      skip_commit: ${{ inputs.skip_commit }}
 
   adapter-dir:
-    # needs: adapter-bin
-    # if: always()
+    needs: adapter-bin
+    if: always()
     uses: ./.github/workflows/adapter-dir.yml
     with:
       skip_commit: ${{ inputs.skip_commit }}
@@ -54,5 +54,26 @@ jobs:
     needs: adapter-mongodb
     if: always()
     uses: ./.github/workflows/adapter-sqlite.yml
+    with:
+      skip_commit: ${{ inputs.skip_commit }}
+
+  adapter-postgresql:
+    needs: adapter-sqlite
+    if: always()
+    uses: ./.github/workflows/adapter-postgresql.yml
+    with:
+      skip_commit: ${{ inputs.skip_commit }}
+
+  adapter-mariadb:
+    needs: adapter-postgresql
+    if: always()
+    uses: ./.github/workflows/adapter-mariadb.yml
+    with:
+      skip_commit: ${{ inputs.skip_commit }}
+
+  adapter-rocks:
+    needs: adapter-mariadb
+    if: always()
+    uses: ./.github/workflows/adapter-rocks.yml
     with:
       skip_commit: ${{ inputs.skip_commit }}

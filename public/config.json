@@ -5,6 +5,9 @@
     "dir-index": "Directory (Index)",
     "memory": "In-Memory",
     "mongodb": "MongoDB",
+    "postgresql": "PostgreSQL",
+    "mariadb": "MariaDB",
+    "rocks": "RocksDB",
     "sqlite": "SQLite",
     "sqlite-better": "Better SQLite3"
 }

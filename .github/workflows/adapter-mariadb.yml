@@ -1,0 +1,60 @@
+name: adapter-mariadb
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_commit:
+        description: "Skip commit results"
+        required: false
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      skip_commit:
+        type: boolean
+        default: false
+
+jobs:
+  run-benchmark:
+    strategy:
+      max-parallel: 4
+      matrix:
+        include:
+          - ver: "bun"
+            os: "ubuntu-latest"
+          - ver: "24"
+            os: "ubuntu-latest"
+          - ver: "22"
+            os: "ubuntu-latest"
+          - ver: "20"
+            os: "ubuntu-latest"
+
+    uses: ./.github/workflows/run-single.yml
+    with:
+      opts: '["mariadb://root@127.0.0.1:3306/valthera", {"mode": "lazy"}]'
+      adapter: "mariadb"
+      ver: ${{ matrix.ver }}
+      os: ${{ matrix.os }}
+      install: "mariadb"
+      setup: |
+        docker run -d --name valthera-mariadb \
+          -e MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=1 \
+          -e MARIADB_DATABASE=valthera \
+          -p 3306:3306 mariadb:11
+        for i in {1..30}; do
+          if docker exec valthera-mariadb mariadb-admin ping -uroot --silent 2>/dev/null; then
+            exit 0
+          fi
+          sleep 2
+        done
+        docker logs valthera-mariadb
+        exit 1
+    secrets: inherit
+
+  commit-results:
+    needs: run-benchmark
+    if: ${{ github.event.inputs.skip_commit != 'true' }}
+    uses: ./.github/workflows/commit-results.yml
+    with:
+      adapter: "mariadb"
+    secrets: inherit
