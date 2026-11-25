@@ -1,8 +1,14 @@
-import { ActionsBase } from "@wxn0brp/db-core/base/actions";
+import { AdapterBase } from "@wxn0brp/db-core/base/adapter";
+import {
+	AdapterCloseError,
+	AdapterError,
+	AdapterInitError,
+	isValtheraError,
+} from "@wxn0brp/db-core/errors";
 import { addId } from "@wxn0brp/db-core/helpers/addId";
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { findUtil } from "@wxn0brp/db-core/utils/action";
+import { findUtil } from "@wxn0brp/db-core/utils/findUtil";
 import { add } from "./bin/add";
 import { ensureCollection, removeCollection } from "./bin/collection";
 import { find, findOne } from "./bin/find";
@@ -13,10 +19,15 @@ import { COLLECTION_HEADER_SIZE } from "./bin/static";
 import { update } from "./bin/update";
 import { version } from "./version";
 
-export class BinAdapter extends ActionsBase {
+export class BinAdapter extends AdapterBase {
 	public readonly manager: BinManager;
 	_inited = false;
 	version = version;
+	capabilities: AdapterBase["capabilities"] = {
+		transactions: false,
+		indexes: false,
+		persistent: true,
+	};
 
 	constructor(path: string, options?: Partial<Options>) {
 		super();
@@ -24,11 +35,25 @@ export class BinAdapter extends ActionsBase {
 	}
 
 	async init() {
-		return this.manager.init();
+		try {
+			return await this.manager.init();
+		} catch (err) {
+			if (isValtheraError(err)) throw err;
+			throw new AdapterInitError(err, {
+				version: this.version,
+			});
+		}
 	}
 
 	async close() {
-		return this.manager.close();
+		try {
+			return await this.manager.close();
+		} catch (err) {
+			if (isValtheraError(err)) throw err;
+			throw new AdapterCloseError(err, {
+				version: this.version,
+			});
+		}
 	}
 
 	[Symbol.asyncDispose]() {
@@ -44,19 +69,29 @@ export class BinAdapter extends ActionsBase {
 	}
 
 	async ensureCollection(collection: string) {
-		if (!this.manager.fd) throw new Error("File not open");
+		if (!this.manager.fd)
+			throw new AdapterError("File not open", {
+				op: "ensureCollection",
+			});
 		if (this.manager.meta.collectionByName.has(collection)) return false;
 		await ensureCollection(this.manager, collection, COLLECTION_HEADER_SIZE);
 		return true;
 	}
 
 	async optimize() {
-		if (!this.manager.fd) throw new Error("File not open");
+		if (!this.manager.fd)
+			throw new AdapterError("File not open", {
+				op: "optimize",
+			});
 		await optimize(this.manager);
 	}
 
 	async removeCollection(collection: string) {
-		if (!this.manager.fd) throw new Error("File not open");
+		if (!this.manager.fd)
+			throw new AdapterError("File not open", {
+				op: "removeCollection",
+			});
+		if (!this.manager.meta.collectionByName.has(collection)) return false;
 		await removeCollection(this.manager, collection);
 		return true;
 	}

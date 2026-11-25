@@ -1,3 +1,4 @@
+import { isValtheraError } from "@wxn0brp/db-core/errors";
 import { DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { findObj } from "@wxn0brp/db-core/utils/process";
@@ -84,7 +85,7 @@ export async function findOne(
 			const res = findObj(config, obj);
 			if (res) return res;
 		} catch (err) {
-			if (rec.flags & RECORD_FLAG.CRC) {
+			if (isValtheraError(err) || rec.flags & RECORD_FLAG.CRC) {
 				throw err;
 			}
 		}
@@ -124,7 +125,7 @@ async function findAll(
 				const res = findObj(config, obj);
 				if (res) results.push(res);
 			} catch (err) {
-				if (rec.flags & RECORD_FLAG.CRC) {
+				if (isValtheraError(err) || rec.flags & RECORD_FLAG.CRC) {
 					throw err;
 				}
 			}

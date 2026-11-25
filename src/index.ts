@@ -1,4 +1,6 @@
 import { ValtheraClass } from "@wxn0brp/db-core";
+import type { Data } from "@wxn0brp/db-core/types/data";
+import type { TypedValthera } from "@wxn0brp/db-core/types/typed";
 import { BinAdapter } from "./adapter";
 import { Options } from "./bin";
 
@@ -6,11 +8,9 @@ export * from "./bin";
 export * from "./adapter";
 export * from "./version";
 
-export async function createBinValthera(
-	path: string,
-	opts: Partial<Options> = {},
-	init = true,
-) {
+export async function createBinValthera<
+	T extends Record<string, Data> = Record<string, never>,
+>(path: string, opts: Partial<Options> = {}, init = true) {
 	const adapter = new BinAdapter(path, opts);
 	const db = new ValtheraClass({
 		adapter,
@@ -20,7 +20,7 @@ export async function createBinValthera(
 	if (init) await db.init();
 
 	return {
-		db,
+		db: db as unknown as TypedValthera<T, ValtheraClass>,
 		adapter,
 		manager: adapter.manager,
 	};
