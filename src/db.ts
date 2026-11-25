@@ -1,15 +1,14 @@
 import type { ValtheraClass } from "@wxn0brp/db-core/db/valthera";
 import { isValtheraError } from "@wxn0brp/db-core/errors";
 import { VQuery } from "@wxn0brp/db-core/types/query";
+import { getOpKind, isKnownOp } from "@wxn0brp/db-core/utils/opKind";
 import { FFResponse, Router } from "@wxn0brp/falcon-frame";
-import { deserializeFunctions } from "@wxn0brp/wts-run-fn";
 import { isAbsolute, resolve, sep } from "path";
 import { gitDir } from "./vars";
 
 export interface Query {
 	type: string;
 	query: VQuery;
-	keys: string[][];
 }
 
 export class Response {
@@ -70,12 +69,6 @@ export enum Codes {
 	INVALID_COLLECTION = "invalid collection",
 }
 
-const collectionOp = new Set([
-	"ensureCollection",
-	"issetCollection",
-	"removeCollection",
-]);
-
 const dbRoot = resolve(gitDir);
 
 function isPathSafe(collection: string) {
@@ -94,12 +87,14 @@ export function createDbRouter(db: ValtheraClass) {
 	const router = new Router();
 
 	async function dbLogic(serverQuery: Query): Promise<Response> {
-		const { type, query, keys } = serverQuery;
+		const { type, query } = serverQuery;
 		const res = new Response();
 
 		if (!type) return res.e(Codes.TYPE_REQ);
 
 		try {
+			if (!isKnownOp(type)) return res.e(Codes.INVALID_TYPE);
+
 			if (!db[type] || typeof db[type] !== "function")
 				return res.e(Codes.INVALID_TYPE);
 
@@ -118,19 +113,21 @@ export function createDbRouter(db: ValtheraClass) {
 			if (typeof query !== "object") return res.e(Codes.QUERY_REQ_OBJ);
 			if (!query.collection) return res.e(Codes.COLLECTION_REQ);
 
-			const parsedVQuery = deserializeFunctions(query, keys || []) as VQuery;
-
-			if (!isPathSafe(query.collection) || !isPathSafe(parsedVQuery.collection))
-				return res.e(Codes.INVALID_COLLECTION);
+			if (!isPathSafe(query.collection)) return res.e(Codes.INVALID_COLLECTION);
 
 			console.log(`[OP] ${type} ${query.collection}`);
 
-			if (collectionOp.has(type)) {
-				const result = await db[type](parsedVQuery.collection);
+			if (getOpKind(type) === "collection") {
+				const result = await db[type](query.collection);
 				return res.r(result);
 			}
 
-			const result = await db[type](parsedVQuery);
+			if (getOpKind(type) === "index") {
+				const result = await db.execute(type as any, query);
+				return res.r(result);
+			}
+
+			const result = await db[type](query);
 			return res.r(result);
 		} catch (err: any) {
 			console.error(`[DB] ${type} failed: ${err.message}`);
@@ -142,7 +139,6 @@ export function createDbRouter(db: ValtheraClass) {
 		const result = await dbLogic({
 			type: req.params.type,
 			query: req.body.query,
-			keys: req.body.keys || [],
 		});
 		result.ff(res);
 	});
@@ -155,7 +151,6 @@ export function createDbRouter(db: ValtheraClass) {
 				collection,
 				...req.body.query,
 			},
-			keys: req.body.keys || [],
 		});
 		result.ff(res);
 	});
@@ -166,7 +161,6 @@ export function createDbRouter(db: ValtheraClass) {
 			const result = await dbLogic({
 				type: req.body.op,
 				query: req.body.query,
-				keys: req.body.keys || [],
 			});
 			result.ff(res);
 		},

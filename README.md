@@ -75,9 +75,9 @@ All requests and responses are JSON. All endpoints require authentication.
 
 | Method | Path | Body | Description |
 |--------|------|------|-------------|
-| `POST` | `/db/:type` | `{ auth, query, keys }` | Run a database operation |
-| `POST` | `/db/:db/:type?c=<collection>` | `{ auth, query, keys }` | Same, collection taken from `?c=` |
-| `POST` | `/` | `{ auth, op, query, keys }` | Same, operation taken from `op` |
+| `POST` | `/db/:type` | `{ auth, query }` | Run a database operation |
+| `POST` | `/db/:db/:type?c=<collection>` | `{ auth, query }` | Same, collection taken from `?c=` |
+| `POST` | `/` | `{ auth, op, query }` | Same, operation taken from `op` |
 | `GET` | `/` | - | Health check, returns `Server is running.` |
 
 ### Authentication
