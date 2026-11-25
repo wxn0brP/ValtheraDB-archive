@@ -19,8 +19,7 @@ typedef struct
 
 typedef struct
 {
-    Buffer updated;
-    bool first_updated;
+    ResultArray *results;
     bool already_updated_one;
 } UpdateState;
 
@@ -31,21 +30,6 @@ typedef struct
     json_error_t error;
     const char *error_message;
 } UpdateContext;
-
-static bool append_updated_str(UpdateContext *ctx, const char *json_str, size_t json_len)
-{
-    bool ok = true;
-    if (!ctx->state.first_updated)
-        ok = buf_append(&ctx->state.updated, ",");
-
-    if (ok)
-    {
-        ctx->state.first_updated = false;
-        ok = buf_append_len(&ctx->state.updated, json_str, json_len);
-    }
-
-    return ok;
-}
 
 static bool set_field(json_t *obj, const char *key, json_t *value)
 {
@@ -268,38 +252,46 @@ static bool update_on_file(const char *file, UpdateContext *ctx)
         if (line_len == 0)
             continue;
 
-        json_t *json = json_loads(line, 0, &ctx->error);
-        if (!json)
-            continue;
-
-        if (!(ctx->opts.one && ctx->state.already_updated_one) && has_fields_advanced(json, ctx->opts.fields) > 0)
+        // Lazy parsing: fast check if keys exist before parsing JSON
+        json_t *obj = json_loads(line, 0, &ctx->error);
+        if (!obj)
         {
-            if (!apply_updater(ctx, json))
+            ok = wb_writeln(&wb, line, line_len);
+            if (!ok)
+                break;
+            continue;
+        }
+
+        if (!(ctx->opts.one && ctx->state.already_updated_one) && has_fields_advanced(obj, ctx->opts.fields) > 0)
+        {
+            if (!apply_updater(ctx, obj))
             {
                 ok = false;
-                json_decref(json);
+                json_decref(obj);
                 break;
             }
 
-            char *dump = json_dumps(json, JSON_COMPACT);
+            char *dump = json_dumps(obj, JSON_COMPACT);
             if (!dump)
             {
                 ok = false;
-                json_decref(json);
+                json_decref(obj);
                 break;
             }
 
             size_t dump_len = strlen(dump);
             
-            // Single serialization: use for both result buffer and file output
-            if (!append_updated_str(ctx, dump, dump_len) || !wb_writeln(&wb, dump, dump_len))
+            // Add to ResultArray for return value
+            if (!result_array_add(ctx->state.results, dump, dump_len))
             {
                 free(dump);
                 ok = false;
-                json_decref(json);
+                json_decref(obj);
                 break;
             }
 
+            // Write to file
+            ok = wb_writeln(&wb, dump, dump_len);
             free(dump);
 
             if (ctx->opts.one)
@@ -310,7 +302,7 @@ static bool update_on_file(const char *file, UpdateContext *ctx)
             ok = wb_writeln(&wb, line, line_len);
         }
 
-        json_decref(json);
+        json_decref(obj);
 
         if (!ok)
             break;
@@ -342,8 +334,7 @@ static UpdateContext make_update_context(json_t *fields, json_t *updater, bool o
             .one = one,
         },
         .state = {
-            .updated = {0},
-            .first_updated = true,
+            .results = result_array_new(),
             .already_updated_one = false,
         },
         .error_message = NULL,
@@ -352,19 +343,19 @@ static UpdateContext make_update_context(json_t *fields, json_t *updater, bool o
     return ctx;
 }
 
-char *update_entries(const char *dir, const char *fields_json, const char *updater_json, bool one)
+void *update_entries(const char *dir, const char *fields_json, const char *updater_json, bool one)
 {
     json_error_t error;
 
     json_t *fields = json_loads(fields_json, 0, &error);
     if (!fields)
-        return copy_result(VDB_ERR_INVALID_FIELDS_JSON, strlen(VDB_ERR_INVALID_FIELDS_JSON));
+        return result_array_error(VDB_ERR_INVALID_FIELDS_JSON);
 
     json_t *updater = json_loads(updater_json, 0, &error);
     if (!updater)
     {
         json_decref(fields);
-        return copy_result("4: Invalid updater JSON", strlen("4: Invalid updater JSON"));
+        return result_array_error("4: Invalid updater JSON");
     }
 
     FileList files;
@@ -372,12 +363,19 @@ char *update_entries(const char *dir, const char *fields_json, const char *updat
     {
         json_decref(fields);
         json_decref(updater);
-        return copy_result(VDB_ERR_DIRECTORY_NOT_FOUND, strlen(VDB_ERR_DIRECTORY_NOT_FOUND));
+        return result_array_error(VDB_ERR_DIRECTORY_NOT_FOUND);
     }
 
     UpdateContext ctx = make_update_context(fields, updater, one);
-    bool ok = buf_init_prealloc(&ctx.state.updated, 64 * 1024) && buf_append(&ctx.state.updated, "[");
+    if (!ctx.state.results)
+    {
+        file_list_free(&files);
+        json_decref(fields);
+        json_decref(updater);
+        return NULL;
+    }
 
+    bool ok = true;
     for (size_t i = 0; ok && i < files.len; i++)
     {
         char filepath[4096];
@@ -393,13 +391,17 @@ char *update_entries(const char *dir, const char *fields_json, const char *updat
     json_decref(fields);
     json_decref(updater);
 
-    if (!ok || !buf_append(&ctx.state.updated, "]"))
+    if (!ok)
     {
-        free(ctx.state.updated.data);
+        result_array_free(ctx.state.results);
         if (ctx.error_message)
-            return copy_result(ctx.error_message, strlen(ctx.error_message));
+        {
+            char message[512];
+            snprintf(message, sizeof(message), "QUERY_INVALID: %s", ctx.error_message);
+            return result_array_error(message);
+        }
         return NULL;
     }
 
-    return ctx.state.updated.data;
+    return ctx.state.results;
 }

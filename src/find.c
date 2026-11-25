@@ -21,8 +21,7 @@ typedef struct
 
 typedef struct
 {
-    Buffer out;
-    bool first;
+    ResultArray *results;
     bool ok;
     long matched;
     long emitted;
@@ -49,29 +48,24 @@ static bool append_match(FindContext *ctx, const char *line, size_t line_len)
     if (find_page_full(ctx))
         return true;
 
-    if (!ctx->state.first && !buf_append(&ctx->state.out, ","))
-        return false;
-    ctx->state.first = false;
-
-    if (!buf_append_len(&ctx->state.out, line, line_len))
+    if (!result_array_add(ctx->state.results, line, line_len))
         return false;
 
     ctx->state.emitted++;
     return true;
 }
 
-static char *find_on_file(const char *file, FindContext *ctx)
+static bool find_on_file(const char *file, FindContext *ctx)
 {
     FILE *f = fopen(file, "r");
     if (!f)
-        return NULL;
+        return true;
 
     LineReader lr;
     lr_init(&lr, f);
 
     size_t line_len;
     const char *line;
-    char *match = NULL;
 
     while ((line = lr_next(&lr, &line_len)) != NULL)
     {
@@ -84,18 +78,15 @@ static char *find_on_file(const char *file, FindContext *ctx)
 
         if (has_fields_advanced(json, ctx->opts.fields) > 0)
         {
-            if (ctx->opts.one)
+            if (!append_match(ctx, line, line_len))
             {
-                match = copy_result(line, line_len);
-                if (!match)
-                    ctx->state.ok = false;
+                ctx->state.ok = false;
                 json_decref(json);
                 break;
             }
 
-            if (!append_match(ctx, line, line_len))
+            if (ctx->opts.one)
             {
-                ctx->state.ok = false;
                 json_decref(json);
                 break;
             }
@@ -107,7 +98,7 @@ static char *find_on_file(const char *file, FindContext *ctx)
     }
 
     fclose(f);
-    return match;
+    return true;
 }
 
 static FindContext make_find_context(json_t *fields, bool one, long offset, long limit)
@@ -120,8 +111,7 @@ static FindContext make_find_context(json_t *fields, bool one, long offset, long
             .limit = limit,
         },
         .state = {
-            .out = {0},
-            .first = true,
+            .results = NULL,
             .ok = true,
             .matched = 0,
             .emitted = 0,
@@ -131,27 +121,30 @@ static FindContext make_find_context(json_t *fields, bool one, long offset, long
     return ctx;
 }
 
-static char *find_internal(const char *dir, const char *fields_json, bool findOne, long offset, long limit)
+static void *find_internal(const char *dir, const char *fields_json, bool findOne, long offset, long limit)
 {
     json_error_t error;
 
     json_t *fields = json_loads(fields_json, 0, &error);
     if (!fields)
-        return copy_result(VDB_ERR_INVALID_FIELDS_JSON, strlen(VDB_ERR_INVALID_FIELDS_JSON));
+        return result_array_error(VDB_ERR_INVALID_FIELDS_JSON);
 
     FileList files;
     if (!get_sorted_db_files(dir, &files))
     {
         json_decref(fields);
-        return copy_result(VDB_ERR_DIRECTORY_NOT_FOUND, strlen(VDB_ERR_DIRECTORY_NOT_FOUND));
+        return result_array_error(VDB_ERR_DIRECTORY_NOT_FOUND);
     }
 
     FindContext ctx = make_find_context(fields, findOne, offset, limit);
-
-    if (!findOne && (!buf_init_prealloc(&ctx.state.out, 1024 * 1024) || !buf_append(&ctx.state.out, "[")))
-        ctx.state.ok = false;
-
-    char *result = NULL;
+    
+    ctx.state.results = result_array_new();
+    if (!ctx.state.results)
+    {
+        file_list_free(&files);
+        json_decref(fields);
+        return NULL;
+    }
 
     for (size_t i = 0; ctx.state.ok && i < files.len; i++)
     {
@@ -159,8 +152,8 @@ static char *find_internal(const char *dir, const char *fields_json, bool findOn
         if (!build_path(filepath, sizeof(filepath), dir, files.items[i]))
             continue;
 
-        result = find_on_file(filepath, &ctx);
-        if (findOne && result)
+        find_on_file(filepath, &ctx);
+        if (findOne && ctx.state.results->count > 0)
             break;
         if (find_page_full(&ctx))
             break;
@@ -171,29 +164,19 @@ static char *find_internal(const char *dir, const char *fields_json, bool findOn
 
     if (!ctx.state.ok)
     {
-        free(ctx.state.out.data);
-        free(result);
+        result_array_free(ctx.state.results);
         return NULL;
     }
 
-    if (findOne)
-        return result ? result : copy_result("null", strlen("null"));
-
-    if (!buf_append(&ctx.state.out, "]"))
-    {
-        free(ctx.state.out.data);
-        return NULL;
-    }
-
-    return ctx.state.out.data;
+    return ctx.state.results;
 }
 
-char *find(const char *dir, const char *fields_json, bool findOne)
+void *find(const char *dir, const char *fields_json, bool findOne)
 {
     return find_internal(dir, fields_json, findOne, 0, -1);
 }
 
-char *find_paged(const char *dir, const char *fields_json, int32_t offset, int32_t limit)
+void *find_paged(const char *dir, const char *fields_json, int32_t offset, int32_t limit)
 {
     if (offset < 0)
         offset = 0;
@@ -203,7 +186,33 @@ char *find_paged(const char *dir, const char *fields_json, int32_t offset, int32
     return find_internal(dir, fields_json, false, (long)offset, (long)limit);
 }
 
-void free_result(char *ptr)
+void free_result(void *ptr)
 {
-    free(ptr);
+    result_array_free((ResultArray *)ptr);
+}
+
+int32_t get_result_count(void *ptr)
+{
+    if (!ptr)
+        return 0;
+    return (int32_t)((ResultArray *)ptr)->count;
+}
+
+const char *get_result_item(void *ptr, int32_t index)
+{
+    if (!ptr)
+        return NULL;
+    
+    ResultArray *arr = (ResultArray *)ptr;
+    if (index < 0 || index >= (int32_t)arr->count)
+        return NULL;
+    
+    return arr->items[index];
+}
+
+bool is_error(void *ptr)
+{
+    if (!ptr)
+        return true;
+    return ((ResultArray *)ptr)->is_error;
 }

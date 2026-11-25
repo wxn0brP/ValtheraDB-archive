@@ -17,8 +17,7 @@ typedef struct
 
 typedef struct
 {
-    Buffer removed;
-    bool first_removed;
+    ResultArray *results;
     bool already_removed_one;
 } RemoveState;
 
@@ -29,39 +28,9 @@ typedef struct
     json_error_t error;
 } RemoveContext;
 
-static bool append_removed(RemoveContext *ctx, const char *line, size_t line_len)
-{
-    if (!ctx->state.first_removed && !buf_append(&ctx->state.removed, ","))
-        return false;
-
-    ctx->state.first_removed = false;
-    return buf_append_len(&ctx->state.removed, line, line_len);
-}
-
-static bool might_contain_keys(const char *line, json_t *fields)
-{
-    const char *key;
-    json_t *value;
-    
-    json_object_foreach(fields, key, value)
-    {
-        char search_key[512];
-        int len = snprintf(search_key, sizeof(search_key), "\"%s\"", key);
-        if (len < 0 || len >= (int)sizeof(search_key))
-            return false;
-        if (!strstr(line, search_key))
-            return false;
-    }
-    
-    return true;
-}
-
 static bool should_remove_line(RemoveContext *ctx, const char *line)
 {
     if (ctx->opts.one && ctx->state.already_removed_one)
-        return false;
-
-    if (!might_contain_keys(line, ctx->opts.fields))
         return false;
 
     json_t *json = json_loads(line, 0, &ctx->error);
@@ -111,7 +80,7 @@ static bool remove_on_file(const char *file, RemoveContext *ctx)
 
         if (should_remove_line(ctx, line))
         {
-            if (!append_removed(ctx, line, line_len))
+            if (!result_array_add(ctx->state.results, line, line_len))
             {
                 ok = false;
                 break;
@@ -154,8 +123,7 @@ static RemoveContext make_remove_context(json_t *fields, bool one)
             .one = one,
         },
         .state = {
-            .removed = {0},
-            .first_removed = true,
+            .results = result_array_new(),
             .already_removed_one = false,
         },
     };
@@ -163,25 +131,31 @@ static RemoveContext make_remove_context(json_t *fields, bool one)
     return ctx;
 }
 
-char *remove_entries(const char *dir, const char *fields_json, bool one)
+void *remove_entries(const char *dir, const char *fields_json, bool one)
 {
     json_error_t error;
 
     json_t *fields = json_loads(fields_json, 0, &error);
     if (!fields)
-        return copy_result(VDB_ERR_INVALID_FIELDS_JSON, strlen(VDB_ERR_INVALID_FIELDS_JSON));
+        return result_array_error(VDB_ERR_INVALID_FIELDS_JSON);
 
     FileList files;
     if (!get_sorted_db_files(dir, &files))
     {
         json_decref(fields);
-        return copy_result(VDB_ERR_DIRECTORY_NOT_FOUND, strlen(VDB_ERR_DIRECTORY_NOT_FOUND));
+        return result_array_error(VDB_ERR_DIRECTORY_NOT_FOUND);
     }
 
     RemoveContext ctx = make_remove_context(fields, one);
-    bool ok = buf_init_prealloc(&ctx.state.removed, 64 * 1024) && buf_append(&ctx.state.removed, "[");
+    if (!ctx.state.results)
+    {
+        file_list_free(&files);
+        json_decref(fields);
+        return NULL;
+    }
 
-    size_t file_limit = one && files.len > 0 ? 1 : files.len;
+    bool ok = true;
+    size_t file_limit = files.len;
     for (size_t i = 0; ok && i < file_limit; i++)
     {
         char filepath[4096];
@@ -189,16 +163,18 @@ char *remove_entries(const char *dir, const char *fields_json, bool one)
             continue;
 
         ok = remove_on_file(filepath, &ctx);
+        if (ctx.state.already_removed_one)
+            break;
     }
 
     file_list_free(&files);
     json_decref(fields);
 
-    if (!ok || !buf_append(&ctx.state.removed, "]"))
+    if (!ok)
     {
-        free(ctx.state.removed.data);
+        result_array_free(ctx.state.results);
         return NULL;
     }
 
-    return ctx.state.removed.data;
+    return ctx.state.results;
 }

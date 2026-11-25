@@ -7,15 +7,16 @@
 #include "conditions.h"
 #include "deep_check.h"
 
-static void normalize_key(const char *src, char *dest)
+static int normalize_key(const char *src, char *dest, size_t capacity)
 {
-    while (*src)
-    {
-        *dest = (char)tolower((unsigned char)*src);
-        dest++;
-        src++;
-    }
-    *dest = '\0';
+    size_t len = strlen(src);
+    if (len >= capacity)
+        return 0;
+
+    for (size_t i = 0; i < len; i++)
+        dest[i] = (char)tolower((unsigned char)src[i]);
+    dest[len] = '\0';
+    return 1;
 }
 
 int has_fields_advanced(json_t *obj, json_t *fields)
@@ -36,7 +37,8 @@ int has_fields_advanced(json_t *obj, json_t *fields)
         if (key[0] == '$')
         {
             char normalized[256];
-            normalize_key(key, normalized);
+            if (!normalize_key(key, normalized, sizeof(normalized)))
+                return 0;
 
             if (strcmp(normalized, "$and") == 0)
             {
@@ -76,7 +78,12 @@ int has_fields_advanced(json_t *obj, json_t *fields)
         if (key[0] == '$')
         {
             char normalized[256];
-            normalize_key(key, normalized);
+            if (!normalize_key(key, normalized, sizeof(normalized)))
+            {
+                json_decref(conditions);
+                json_decref(simple_fields);
+                return 0;
+            }
             json_object_set(conditions, normalized, value);
         }
         else

@@ -21,10 +21,23 @@ typedef struct
     size_t cap;
 } FileList;
 
+typedef struct
+{
+    char **items;
+    size_t count;
+    size_t capacity;
+    bool is_error;
+} ResultArray;
+
 bool buf_init(Buffer *b);
 bool buf_init_prealloc(Buffer *b, size_t initial_cap);
 bool buf_append_len(Buffer *b, const char *s, size_t slen);
 bool buf_append(Buffer *b, const char *s);
+
+ResultArray *result_array_new(void);
+ResultArray *result_array_error(const char *error_msg);
+bool result_array_add(ResultArray *arr, const char *data, size_t len);
+void result_array_free(ResultArray *arr);
 
 typedef struct
 {

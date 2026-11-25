@@ -120,6 +120,7 @@ const char *lr_next(LineReader *lr, size_t *out_len)
                 while (line_pos > 0 && (line_buf[line_pos - 1] == '\r' || line_buf[line_pos - 1] == ' ' || line_buf[line_pos - 1] == '\t'))
                     line_pos--;
 
+                line_buf[line_pos] = '\0';
                 *out_len = line_pos;
                 return line_buf;
             }
@@ -142,6 +143,7 @@ const char *lr_next(LineReader *lr, size_t *out_len)
         {
             if (line_pos > 0)
             {
+                line_buf[line_pos] = '\0';
                 *out_len = line_pos;
                 lr->eof = false;
                 return line_buf;
@@ -210,6 +212,75 @@ char *copy_result(const char *s, size_t len)
     memcpy(res, s, len);
     res[len] = '\0';
     return res;
+}
+
+ResultArray *result_array_new(void)
+{
+    ResultArray *arr = (ResultArray *)malloc(sizeof(ResultArray));
+    if (!arr)
+        return NULL;
+
+    arr->capacity = 1024;
+    arr->count = 0;
+    arr->items = (char **)malloc(arr->capacity * sizeof(char *));
+    if (!arr->items)
+    {
+        free(arr);
+        return NULL;
+    }
+    arr->is_error = false;
+
+    return arr;
+}
+
+ResultArray *result_array_error(const char *error_msg)
+{
+    ResultArray *arr = result_array_new();
+    if (!arr)
+        return NULL;
+
+    arr->is_error = true;
+    if (!result_array_add(arr, error_msg, strlen(error_msg)))
+    {
+        result_array_free(arr);
+        return NULL;
+    }
+
+    return arr;
+}
+
+bool result_array_add(ResultArray *arr, const char *data, size_t len)
+{
+    if (arr->count >= arr->capacity)
+    {
+        size_t new_cap = arr->capacity * 2;
+        char **new_items = (char **)realloc(arr->items, new_cap * sizeof(char *));
+        if (!new_items)
+            return false;
+
+        arr->items = new_items;
+        arr->capacity = new_cap;
+    }
+
+    char *copy = copy_result(data, len);
+    if (!copy)
+        return false;
+
+    arr->items[arr->count++] = copy;
+    return true;
+}
+
+void result_array_free(ResultArray *arr)
+{
+    if (!arr)
+        return;
+
+    for (size_t i = 0; i < arr->count; i++)
+    {
+        free(arr->items[i]);
+    }
+    free(arr->items);
+    free(arr);
 }
 
 static bool has_db_suffix(const char *name)

@@ -17,9 +17,13 @@
         "arm64"
     ],
     "type": "module",
+    "scripts": {
+        "build": "bash build.sh",
+        "prepare": "bash build.sh"
+    },
     "dependencies": {
-        "@wxn0brp/db-core": "^0.12.7",
-        "@wxn0brp/db-storage-dir": "^0.120.4"
+        "@wxn0brp/db-core": "^0.13.0",
+        "@wxn0brp/db-storage-dir": "^0.130.0"
     },
     "devDependencies": {
         "@types/bun": "*",
