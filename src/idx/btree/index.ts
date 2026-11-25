@@ -20,7 +20,7 @@ export class BTree {
 		const header = this.pm.getHeader();
 		if (header.count === 0) return [];
 
-		const leafRef = await findLeaf(this.pm, value);
+		const leafRef = await findLeaf(this.pm, value, true);
 		let currentLeaf: LeafNode = leafRef.node as LeafNode;
 		let currentPageId = leafRef.pageId;
 
@@ -91,38 +91,51 @@ export class BTree {
 		const header = this.pm.getHeader();
 		if (header.count === 0) return false;
 
-		const leafRef = await findLeaf(this.pm, value);
-		const leaf = leafRef.node as LeafNode;
-		const leafPageId = leafRef.pageId;
+		let leafRef = await findLeaf(this.pm, value, true);
 
-		let found = -1;
-		for (let i = 0; i < leaf.count; i++) {
-			const keyVal = decodeKey(leaf.keys[i]);
-			const cmpKey = compareSafe(keyVal, value);
-			if (cmpKey === 0 && leaf.fileNums[i] === file) {
-				found = i;
-				break;
+		while (true) {
+			const leaf = leafRef.node as LeafNode;
+
+			let found = -1;
+			for (let i = 0; i < leaf.count; i++) {
+				const keyVal = decodeKey(leaf.keys[i]);
+				if (compareSafe(keyVal, value) === 0 && leaf.fileNums[i] === file) {
+					found = i;
+					break;
+				}
 			}
+
+			if (found !== -1) {
+				const leafPageId = leafRef.pageId;
+				leaf.keys.splice(found, 1);
+				leaf.fileNums.splice(found, 1);
+				leaf.count--;
+
+				const isRoot = header.rootPage === leafPageId;
+				if (!isRoot && leaf.count < MIN_ENTRIES) {
+					await this.pm.writePage(leafPageId, leaf);
+					await rebalanceLeaf(this.pm, leaf, leafPageId);
+				} else {
+					await this.pm.writePage(leafPageId, leaf);
+				}
+
+				header.count--;
+				await this.pm.writeHeader();
+
+				return true;
+			}
+
+			if (leaf.nextPage === 0) return false;
+
+			const next = await this.pm.readPage<LeafNode>(leaf.nextPage);
+			if (next.type !== PageType.Leaf || next.count === 0) return false;
+			if (compareSafe(decodeKey(next.keys[0]), value) > 0) return false;
+
+			leafRef = {
+				pageId: leaf.nextPage,
+				node: next,
+			};
 		}
-
-		if (found === -1) return false;
-
-		leaf.keys.splice(found, 1);
-		leaf.fileNums.splice(found, 1);
-		leaf.count--;
-
-		const isRoot = header.rootPage === leafPageId;
-		if (!isRoot && leaf.count < MIN_ENTRIES) {
-			await this.pm.writePage(leafPageId, leaf);
-			await rebalanceLeaf(this.pm, leaf, leafPageId);
-		} else {
-			await this.pm.writePage(leafPageId, leaf);
-		}
-
-		header.count--;
-		await this.pm.writeHeader();
-
-		return true;
 	}
 
 	async bulkLoad(
@@ -263,6 +276,28 @@ export class BTree {
 			return {
 				type: 1,
 				data: buf,
+			};
+		}
+		if (typeof value === "boolean") {
+			return {
+				type: 2,
+				data: Buffer.from([
+					value ? 1 : 0,
+				]),
+			};
+		}
+		if (value instanceof Date) {
+			const buf = Buffer.alloc(8);
+			buf.writeDoubleLE(value.getTime(), 0);
+			return {
+				type: 3,
+				data: buf,
+			};
+		}
+		if (value === null) {
+			return {
+				type: 4,
+				data: Buffer.alloc(0),
 			};
 		}
 		const str = String(value);

@@ -18,7 +18,7 @@ import { convertResultToArray, getCollectionAndFileNum } from "./utils";
 import { AnotherCache } from "@wxn0brp/ac";
 
 export interface IndexDirActions extends FileAdapter {
-	createIndex(config: VQueryT.CreateIndex): Promise<void>;
+	createIndex(config: VQueryT.CreateIndex | string): Promise<void>;
 }
 
 export function createIndexDirAdapter(
@@ -205,13 +205,13 @@ export function createIndexDirAdapter(
 					if (!keys) return await value.call(target, file, config, one, opts);
 
 					const findResults = await target.find(file, config, opts);
-					if (!findResults || findResults.length === 0) return one ? null : [];
+					if (!findResults || findResults.length === 0) return [];
 
 					const result = await value.call(target, file, config, one, opts);
 
 					const pms = await getPMs(collection, keys);
 					await updateIndex(
-						findResults,
+						one ? findResults.slice(0, 1) : findResults,
 						convertResultToArray(result),
 						fileNum,
 						keys,
@@ -233,9 +233,11 @@ export function createIndexDirAdapter(
 		indexes: true,
 		persistent: dirCaps.persistent ?? true,
 	};
-	indexDirAction.createIndex = async (config: VQueryT.CreateIndex) => {
-		const { index } = config;
-		const collection = pathRepair(config.collection);
+	indexDirAction.createIndex = async (config: VQueryT.CreateIndex | string) => {
+		const index = typeof config === "string" ? undefined : config.index;
+		const collection = pathRepair(
+			typeof config === "string" ? config : config.collection,
+		);
 		const keys =
 			index?.fields ||
 			(Object.hasOwn(indexConfig, collection)

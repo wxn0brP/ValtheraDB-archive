@@ -4,7 +4,11 @@ import { PageManager } from "../page";
 import { InternalNode, LeafNode, NodeRef, PageType } from "./types";
 import { decodeKey } from "./utils";
 
-export async function findLeaf(pm: PageManager, value: any): Promise<NodeRef> {
+export async function findLeaf(
+	pm: PageManager,
+	value: any,
+	leftmost = false,
+): Promise<NodeRef> {
 	let pageId = pm.getHeader().rootPage;
 	let node = await pm.readRoot();
 
@@ -14,7 +18,8 @@ export async function findLeaf(pm: PageManager, value: any): Promise<NodeRef> {
 
 		for (let i = 0; i < internal.count; i++) {
 			const keyVal = decodeKey(internal.keys[i]);
-			if (compareSafe(value, keyVal) < 0) {
+			const cmp = compareSafe(value, keyVal);
+			if (cmp < 0 || (leftmost && cmp === 0)) {
 				childIdx = i;
 				break;
 			}
