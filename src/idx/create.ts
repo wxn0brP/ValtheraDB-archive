@@ -1,5 +1,5 @@
 import type { VQueryT } from "@wxn0brp/db-core/types/query";
-import { FileActions } from "@wxn0brp/db-storage-dir";
+import { FileAdapter } from "@wxn0brp/db-storage-dir";
 import { access, unlink } from "fs/promises";
 import { join } from "path";
 import { BTree } from "./btree";
@@ -7,7 +7,7 @@ import { create } from "./page/utils";
 import { compareSafe } from "@wxn0brp/db-core/utils/compare";
 
 export async function createIndex(
-	action: FileActions,
+	action: FileAdapter,
 	collection: string,
 	keys: string[],
 ) {
@@ -31,7 +31,6 @@ export async function createIndex(
 			const query: VQueryT.Find = {
 				collection,
 				search: {},
-				context: {},
 				control: {},
 				dbFindOpts: {},
 				findOpts: {},

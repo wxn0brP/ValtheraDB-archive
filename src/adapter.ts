@@ -1,6 +1,7 @@
+import { pathRepair } from "@wxn0brp/db-core/base/customFileCpu";
 import type { VQueryT } from "@wxn0brp/db-core/types/query";
-import { FileActions } from "@wxn0brp/db-storage-dir";
-import { FileActionsUtils } from "@wxn0brp/db-storage-dir/action.utils";
+import { FileAdapter } from "@wxn0brp/db-storage-dir";
+import { FileAdapterUtils } from "@wxn0brp/db-storage-dir/adapter.utils";
 import { access } from "fs/promises";
 import { join } from "path";
 import { createIndex } from "./idx/create";
@@ -16,15 +17,15 @@ import type { IndexConfig } from "./types";
 import { convertResultToArray, getCollectionAndFileNum } from "./utils";
 import { AnotherCache } from "@wxn0brp/ac";
 
-export interface IndexDirActions extends FileActions {
-	createIndex(collection: string): Promise<void>;
+export interface IndexDirActions extends FileAdapter {
+	createIndex(config: VQueryT.CreateIndex): Promise<void>;
 }
 
 export function createIndexDirAdapter(
-	action: FileActions,
+	action: FileAdapter,
 	indexConfig: IndexConfig,
 ): IndexDirActions {
-	const getSortedFilesOriginal: FileActionsUtils["getSortedFiles"] =
+	const getSortedFilesOriginal: FileAdapterUtils["getSortedFiles"] =
 		action.utils.getSortedFiles.bind(action.utils);
 
 	const pmCaches = new Map<string, Map<string, PageManager>>();
@@ -41,7 +42,11 @@ export function createIndexDirAdapter(
 		}
 		let pm = colMap.get(key);
 		if (!pm) {
-			const indexPath = join(action.folder, collection, `${key}.idx`);
+			const indexPath = join(
+				action.folder,
+				pathRepair(collection),
+				`${key}.idx`,
+			);
 			pm = await create(indexPath);
 			colMap.set(key, pm);
 		}
@@ -59,12 +64,15 @@ export function createIndexDirAdapter(
 		return result;
 	};
 
-	const getSortedFiles: FileActionsUtils["getSortedFiles"] = async (
+	const getSortedFiles: FileAdapterUtils["getSortedFiles"] = async (
 		folder,
 		query,
+		opts,
 	) => {
-		const files = await getSortedFilesOriginal(folder, query);
-		const collectionKeys = indexConfig[query.collection];
+		const files = await getSortedFilesOriginal(folder, query, opts);
+		const collectionKeys = Object.hasOwn(indexConfig, query.collection)
+			? indexConfig[query.collection]
+			: undefined;
 
 		if (!collectionKeys || !query.search || typeof query.search !== "object")
 			return files;
@@ -72,14 +80,20 @@ export function createIndexDirAdapter(
 		let candidateFiles: Set<number> = null;
 
 		for (const key of collectionKeys) {
-			if (!(key in query.search)) continue;
+			if (!Object.hasOwn(query.search, key)) continue;
 
 			const searchData = (query.search as any)[key];
 			if (searchData === undefined) continue;
+			// exact-match only: operators, regex and object values fall through to a full scan
+			if (typeof searchData === "object" && searchData !== null) continue;
 
 			const cacheKey = `${query.collection}:${key}`;
 			if (!indexExistsCache.has(cacheKey)) {
-				const indexPath = join(action.folder, query.collection, `${key}.idx`);
+				const indexPath = join(
+					action.folder,
+					pathRepair(query.collection),
+					`${key}.idx`,
+				);
 				try {
 					await access(indexPath);
 					indexExistsCache.set(cacheKey, true);
@@ -213,8 +227,20 @@ export function createIndexDirAdapter(
 	});
 
 	const indexDirAction = action as IndexDirActions;
-	indexDirAction.createIndex = async (collection: string) => {
-		const keys = indexConfig[collection];
+	const dirCaps = (action as any).capabilities ?? {};
+	(indexDirAction as any).capabilities = {
+		transactions: dirCaps.transactions ?? true,
+		indexes: true,
+		persistent: dirCaps.persistent ?? true,
+	};
+	indexDirAction.createIndex = async (config: VQueryT.CreateIndex) => {
+		const { index } = config;
+		const collection = pathRepair(config.collection);
+		const keys =
+			index?.fields ||
+			(Object.hasOwn(indexConfig, collection)
+				? indexConfig[collection]
+				: undefined);
 		if (!keys) return;
 
 		const colMap = pmCaches.get(collection);

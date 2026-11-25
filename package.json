@@ -17,8 +17,8 @@
     },
     "dependencies": {
         "@wxn0brp/ac": "^0.1.0",
-        "@wxn0brp/db-core": "^0.12.2",
-        "@wxn0brp/db-storage-dir": "^0.120.2"
+        "@wxn0brp/db-core": "^0.13.0",
+        "@wxn0brp/db-storage-dir": "^0.130.0"
     },
     "devDependencies": {
         "@types/bun": "*",

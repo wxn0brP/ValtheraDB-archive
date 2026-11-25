@@ -8,9 +8,10 @@ export async function rebalanceLeaf(
 	leafPageId: number,
 ) {
 	const header = pm.getHeader();
-	const parent = leaf.parent === header.rootPage
-		? await pm.readRoot<InternalNode>()
-		: await pm.readPage<InternalNode>(leaf.parent);
+	const parent =
+		leaf.parent === header.rootPage
+			? await pm.readRoot<InternalNode>()
+			: await pm.readPage<InternalNode>(leaf.parent);
 
 	const childIdx = findChildIdx(parent, leafPageId);
 
@@ -104,9 +105,10 @@ async function rebalanceInternal(
 	const header = pm.getHeader();
 	if (node.parent === 0) return;
 
-	const parent = node.parent === header.rootPage
-		? await pm.readRoot<InternalNode>()
-		: await pm.readPage<InternalNode>(node.parent);
+	const parent =
+		node.parent === header.rootPage
+			? await pm.readRoot<InternalNode>()
+			: await pm.readPage<InternalNode>(node.parent);
 	const childIdx = findChildIdx(parent, pageId);
 
 	if (childIdx > 0) {

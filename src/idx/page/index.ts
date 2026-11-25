@@ -1,3 +1,4 @@
+import { AdapterError } from "@wxn0brp/db-core/errors";
 import { type FileHandle } from "fs/promises";
 import {
 	PAGE_SIZE,
@@ -21,7 +22,10 @@ export class PageManager {
 	}
 
 	async readPage<T extends BTreeNode>(pageId: number) {
-		if (pageId === 0) throw new Error("Cannot read header as node");
+		if (pageId === 0)
+			throw new AdapterError("Cannot read header as node", {
+				pageId,
+			});
 		const buf = Buffer.alloc(PAGE_SIZE);
 		await this.fd.read(buf, 0, PAGE_SIZE, pageId * PAGE_SIZE);
 		return deserializeNode(buf) as T;

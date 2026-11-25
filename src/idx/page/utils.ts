@@ -1,3 +1,4 @@
+import { AdapterError } from "@wxn0brp/db-core/errors";
 import { open, type FileHandle } from "fs/promises";
 import { PageManager } from ".";
 import {
@@ -94,7 +95,9 @@ export function deserializeNode(buf: Buffer): BTreeNode {
 		return node;
 	}
 
-	throw new Error(`Unknown page type: ${type}`);
+	throw new AdapterError(`Unknown page type: ${type}`, {
+		type,
+	});
 }
 
 export function serializeHeader(header: IndexHeader, buf: Buffer) {
@@ -108,7 +111,11 @@ export function serializeHeader(header: IndexHeader, buf: Buffer) {
 
 export function deserializeHeader(buf: Buffer): IndexHeader {
 	const magic = buf.toString("ascii", 0, 4);
-	if (magic !== MAGIC) throw new Error(`Invalid index file: ${magic}`);
+	if (magic !== MAGIC)
+		throw new AdapterError(`Invalid index file: ${magic}`, {
+			magic,
+			expected: MAGIC,
+		});
 	return {
 		rootPage: buf.readUInt32LE(5),
 		nextPage: buf.readUInt32LE(9),

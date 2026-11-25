@@ -1,3 +1,4 @@
+import { AdapterError } from "@wxn0brp/db-core/errors";
 import { compareSafe } from "@wxn0brp/db-core/utils/compare";
 import { PageManager } from "../page";
 import { InternalNode, LeafNode, NodeRef, PageType } from "./types";
@@ -24,7 +25,13 @@ export async function findLeaf(pm: PageManager, value: any): Promise<NodeRef> {
 	}
 
 	if (node.type !== PageType.Leaf) {
-		throw new Error(`findLeaf: expected leaf node at page ${pageId}, got type ${node.type}`);
+		throw new AdapterError(
+			`findLeaf: expected leaf node at page ${pageId}, got type ${node.type}`,
+			{
+				pageId,
+				type: node.type,
+			},
+		);
 	}
 
 	return {

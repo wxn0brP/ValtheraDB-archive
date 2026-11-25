@@ -1,6 +1,6 @@
 import { forgeTypedValthera, ValtheraClass } from "@wxn0brp/db-core";
-import { Collection } from "@wxn0brp/db-core/helpers/collection";
 import { Data } from "@wxn0brp/db-core/types/data";
+import type { TypedValthera } from "@wxn0brp/db-core/types/typed";
 import { createFileAdapter } from "@wxn0brp/db-storage-dir";
 import { createIndexDirAdapter, type IndexDirActions } from "./adapter";
 import type {
@@ -15,17 +15,10 @@ export function createDirIndex<T extends Record<string, Data>>(
 	folder: string,
 	indexConfig: IndexConfig = {},
 	opts: DirIndexOpts = {},
-): ValtheraClass &
-	ValtheraIndexDirInterface & {
-		[K in keyof T]: Collection<T[K]>;
-	} {
+): TypedValthera<T, ValtheraClass & ValtheraIndexDirInterface> {
 	const adapter = createDirIndexAdapter(folder, indexConfig, opts);
 	const db = new ValtheraClass({
 		adapter,
-	});
-
-	Object.assign(db, {
-		createIndex: (collection: string) => adapter.createIndex(collection),
 	});
 
 	return forgeTypedValthera(db) as any;
