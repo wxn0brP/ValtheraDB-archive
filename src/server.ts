@@ -1,9 +1,10 @@
 import { ValtheraCreate } from "@wxn0brp/db";
 import { isValtheraError } from "@wxn0brp/db-core/errors";
 import { VQuery } from "@wxn0brp/db-core/types/query";
+import { getOpKind, isKnownOp } from "@wxn0brp/db-core/utils/opKind";
 import FalconFrame from "@wxn0brp/falcon-frame";
-import { deserializeFunctions } from "@wxn0brp/wts-run-fn";
 import path from "path";
+import { deserializeRegex } from "./serialize";
 
 const app = new FalconFrame();
 const dbDir = process.env.DB_DIR || process.cwd();
@@ -16,12 +17,11 @@ app.setOrigin([
 
 app.post("/db/:type", async (req, res) => {
 	const { type } = req.params;
-	const { keys, query } = req.body as {
-		keys: string[][];
+	const { query } = req.body as {
 		query: VQuery;
 	};
 
-	if (!type || typeof db[type] !== "function") {
+	if (!type || !isKnownOp(type) || typeof db[type] !== "function") {
 		res.status(400);
 		return {
 			err: true,
@@ -31,16 +31,21 @@ app.post("/db/:type", async (req, res) => {
 	const str = type + "(" + Bun.JSON5.stringify(query) + ")";
 	console.log(str);
 
+	const kind = getOpKind(type);
+
 	try {
 		let result: any = null;
 
 		if (type === "getCollections") {
 			result = await db.getCollections();
-		} else if (type.includes("Collection")) {
+		} else if (type === "capabilities") {
+			result = await db.capabilities();
+		} else if (kind === "collection") {
 			result = await db[type](query.collection);
+		} else if (kind === "index") {
+			result = await db.execute(type as any, deserializeRegex(query));
 		} else {
-			const parsedParams = deserializeFunctions(query, keys || []);
-			result = await db[type](parsedParams);
+			result = await db[type](deserializeRegex(query));
 		}
 
 		return {

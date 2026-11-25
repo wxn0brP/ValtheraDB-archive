@@ -10,11 +10,10 @@ export const operations = [
 		min: 2,
 	},
 	{
-		name: "find <collection> <search> [options] [findOpts] [context]",
+		name: "find <collection> <search> [options] [findOpts]",
 		description: "Find documents in a collection",
 		args: [
 			"string",
-			"object",
 			"object",
 			"object",
 			"object",
@@ -60,33 +59,30 @@ export const operations = [
 		min: 2,
 	},
 	{
-		name: "findOne <collection> <search> [findOpts] [context]",
+		name: "findOne <collection> <search> [findOpts]",
 		description: "Find one document in a collection",
 		args: [
 			"string",
-			"object",
 			"object",
 			"object",
 		],
 		min: 2,
 	},
 	{
-		name: "update <collection> <search> <updater> [context]",
+		name: "update <collection> <search> <updater>",
 		description: "Update documents in a collection",
 		args: [
 			"string",
-			"object",
 			"object",
 			"object",
 		],
 		min: 3,
 	},
 	{
-		name: "updateOne <collection> <search> <updater> [context]",
+		name: "updateOne <collection> <search> <updater>",
 		description: "Update one document in a collection",
 		args: [
 			"string",
-			"object",
 			"object",
 			"object",
 		],
@@ -104,27 +100,25 @@ export const operations = [
 		min: 3,
 	},
 	{
-		name: "remove <collection> <search> [context]",
+		name: "remove <collection> <search>",
 		description: "Remove documents in a collection",
 		args: [
 			"string",
 			"object",
-			"object",
 		],
 		min: 2,
 	},
 	{
-		name: "removeOne <collection> <search> [context]",
+		name: "removeOne <collection> <search>",
 		description: "Remove one document in a collection",
 		args: [
 			"string",
 			"object",
-			"object",
 		],
 		min: 2,
 	},
 	{
-		name: "toggleOne <collection> <data>",
+		name: "toggleOne <collection> <search> [data]",
 		description: "Update one document in a collection",
 		args: [
 			"string",

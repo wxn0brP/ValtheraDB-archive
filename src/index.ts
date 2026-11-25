@@ -5,6 +5,7 @@ import { isValtheraError } from "@wxn0brp/db-core/errors";
 import { Command } from "commander";
 import { existsSync, readFileSync } from "fs";
 import { collectionOperations, operations } from "./operations";
+import { deserializeRegex } from "./serialize";
 import { parseData } from "./utils";
 import { createAdapter } from "@wxn0brp/db-resolver";
 import { Opts } from "@wxn0brp/db-resolver/types";
@@ -138,7 +139,8 @@ operations.forEach(operation => {
 
 				const args = raw.map((data, i) => {
 					const type = operation.args[i] || "string";
-					return parseData(data, type);
+					const parsed = parseData(data, type);
+					return typeof parsed === "object" ? deserializeRegex(parsed) : parsed;
 				});
 
 				const collection = args.shift();

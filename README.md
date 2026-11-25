@@ -66,14 +66,14 @@ vdb updateOne user "{id:123}" "{name: 'John'}"
 | `add <collection> <data> [id_gen]` | Add a document to a collection |
 | `bulkAdd <collection> <data> [id_gen]` | Add multiple documents to a collection |
 | `count <collection> [search]` | Count documents in a collection |
-| `find <collection> <search> [options] [findOpts] [context]` | Find documents in a collection |
-| `findOne <collection> <search> [findOpts] [context]` | Find one document in a collection |
-| `update <collection> <search> <updater> [context]` | Update documents in a collection |
-| `updateOne <collection> <search> <updater> [context]` | Update one document in a collection |
+| `find <collection> <search> [options] [findOpts]` | Find documents in a collection |
+| `findOne <collection> <search> [findOpts]` | Find one document in a collection |
+| `update <collection> <search> <updater>` | Update documents in a collection |
+| `updateOne <collection> <search> <updater>` | Update one document in a collection |
 | `updateOneOrAdd <collection> <search> <updater> [add_arg]` | Update one document or add it if missing |
-| `remove <collection> <search> [context]` | Remove documents in a collection |
-| `removeOne <collection> <search> [context]` | Remove one document in a collection |
-| `toggleOne <collection> <data>` | Remove one document or add it if missing |
+| `remove <collection> <search>` | Remove documents in a collection |
+| `removeOne <collection> <search>` | Remove one document in a collection |
+| `toggleOne <collection> <search> [data]` | Remove one document or add it if missing |
 | `createIndex <collection> <fields> [opts]` | Create an index on a collection |
 | `removeIndex <collection> <fields>` | Remove an index from a collection |
 | `getCollections` | Get all collections |
@@ -84,6 +84,13 @@ vdb updateOne user "{id:123}" "{name: 'John'}"
 
 Errors reported by the database are printed with their error code, suggestion and
 context. Pass `--json` to get the raw (JSON) result or error payload.
+
+Queries are validated by the database before they reach the adapter. Regular
+expressions in `$regex` must be passed in serialized form:
+
+```bash
+vdb find user '{$regex: {name: {source: "^Jo", flags: "i"}}}'
+```
 
 ## License
 
