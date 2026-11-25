@@ -5,14 +5,6 @@ export const COLLECTIONS = {
 	SQUIRREL_CATCHUP: "__squirrel_catchup",
 };
 
-export const COLLECTION_OPS = new Set([
-	"getCollections",
-	"capabilities",
-	"ensureCollection",
-	"issetCollection",
-	"removeCollection",
-]);
-
 export const NO_QUERY_OPS = new Set([
 	"getCollections",
 	"capabilities",

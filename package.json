@@ -18,9 +18,9 @@
         "bun": "bun run src/index.ts"
     },
     "dependencies": {
-        "@wxn0brp/db-client": "^0.120.7",
-        "@wxn0brp/db-core": "^0.12.10",
-        "@wxn0brp/falcon-frame": "^0.9.7"
+        "@wxn0brp/db-client": "^0.130.0",
+        "@wxn0brp/db-core": "^0.13.0",
+        "@wxn0brp/falcon-frame": "^0.9.11"
     },
     "devDependencies": {
         "@types/bun": "*",

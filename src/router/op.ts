@@ -1,5 +1,6 @@
 import { isValtheraError } from "@wxn0brp/db-core/errors";
 import type { VQuery } from "@wxn0brp/db-core/types/query";
+import { getOpKind } from "@wxn0brp/db-core/utils/opKind";
 import { FFRequest, FFResponse } from "@wxn0brp/falcon-frame";
 import { logger } from "../logger";
 import { bulkAddOp } from "../replication/bulkAdd";
@@ -7,7 +8,7 @@ import { replicationCount } from "../replication/count";
 import { replicationFind, replicationFindOne } from "../replication/find";
 import { replicationOther } from "../replication/other";
 import { Squirrel } from "../squirrel";
-import { COLLECTION_OPS, HTTP_STATUS, NO_QUERY_OPS } from "../vars";
+import { HTTP_STATUS, NO_QUERY_OPS } from "../vars";
 import { useCatchupServer } from "./catchup";
 import { fullScanCollectionOp, fullScanReq } from "./fullScan";
 
@@ -90,7 +91,7 @@ export async function useDbOp(
 		};
 	}
 
-	if (COLLECTION_OPS.has(op)) {
+	if (getOpKind(op) === "collection") {
 		const res = await fullScanCollectionOp(squirrel, data, op);
 		return {
 			err: false,

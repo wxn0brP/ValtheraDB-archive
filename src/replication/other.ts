@@ -12,7 +12,7 @@ export async function replicationOther(
 	squirrel: Squirrel,
 	op: string,
 	id: string,
-	data: VQuery<Data, false>,
+	data: VQuery<Data>,
 ): Promise<any> {
 	logger.debug(
 		"REPLICATION",
