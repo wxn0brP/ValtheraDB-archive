@@ -1,5 +1,5 @@
-import { CustomFileCpu } from "@wxn0brp/db-core";
-import { CustomActionsBase } from "@wxn0brp/db-core/base/custom";
+import { CustomFileCpu, QueryValidationError } from "@wxn0brp/db-core";
+import { CustomAdapterBase } from "@wxn0brp/db-core/base/customAdapter";
 import { addIdBulk } from "@wxn0brp/db-core/helpers/addId";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
 import { hasFieldsAdvanced } from "@wxn0brp/db-core/utils/hasFieldsAdvanced";
@@ -12,7 +12,7 @@ export interface AsyncStorageLike {
 	getAllKeys(): Promise<readonly string[]>;
 }
 
-export class RNAsyncStorageActions extends CustomActionsBase {
+export class RNAsyncStorageActions extends CustomAdapterBase {
 	version = version;
 	capabilities = {
 		transactions: false,
@@ -32,6 +32,12 @@ export class RNAsyncStorageActions extends CustomActionsBase {
 	}
 
 	_getPath(collection: string) {
+		if (collection.split(/[/\\]+/).includes("..")) {
+			throw new QueryValidationError("Path traversal is not allowed", {
+				op: "getPath",
+				path: collection,
+			});
+		}
 		return "vdb_" + this.name + "_" + collection;
 	}
 

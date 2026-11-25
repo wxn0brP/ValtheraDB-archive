@@ -1,6 +1,6 @@
 import { forgeTypedValthera, ValtheraClass } from "@wxn0brp/db-core";
-import { Collection } from "@wxn0brp/db-core/helpers/collection";
 import { Data } from "@wxn0brp/db-core/types/data";
+import { TypedValthera } from "@wxn0brp/db-core/types/typed";
 import { RNAsyncStorageActions, AsyncStorageLike } from "./async-storage";
 
 export * from "./async-storage";
@@ -11,7 +11,7 @@ export async function createRNAsyncStorageValthera<
 	name: string,
 	storage: AsyncStorageLike,
 	data?: T,
-): Promise<ValtheraClass & { [K in keyof T]: Collection<T[K][number]> }> {
+): Promise<TypedValthera<T, ValtheraClass>> {
 	const db = new ValtheraClass({
 		adapter: new RNAsyncStorageActions(name, storage),
 	});
