@@ -3,7 +3,7 @@ import {
 	AdapterInitError,
 	isValtheraError,
 } from "@wxn0brp/db-core/errors";
-import { GitSnapshotActions } from "./file";
+import { GitSnapshotAdapter } from "./file";
 import { DebounceFlusher } from "./flusher";
 import { GitManager } from "./git";
 import type { GitAdapterOpts } from "./types";
@@ -11,7 +11,7 @@ import type { GitAdapterOpts } from "./types";
 export async function createGit(opts: GitAdapterOpts) {
 	const { dir, git, flusher } = opts;
 
-	const adapter = new GitSnapshotActions(dir, opts.dirOpts ?? {});
+	const adapter = new GitSnapshotAdapter(dir, opts.dirOpts ?? {});
 	const gitManager = new GitManager(git, dir);
 
 	await adapter.init();
@@ -75,5 +75,5 @@ export async function createGitAdapter(opts: GitAdapterOpts) {
 }
 
 export const DYNAMIC = {
-	git: createGitAdapter,
+	def: createGitAdapter,
 };

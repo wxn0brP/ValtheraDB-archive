@@ -1,8 +1,8 @@
-import { FileActions, vFileCpu } from "@wxn0brp/db-storage-dir";
+import { FileAdapter, vFileCpu } from "@wxn0brp/db-storage-dir";
 import type { DbDirOpts } from "@wxn0brp/db-storage-dir/types";
 import { version } from "./version";
 
-export class GitSnapshotActions extends FileActions {
+export class GitSnapshotAdapter extends FileAdapter {
 	version = version;
 	capabilities = {
 		transactions: true,
