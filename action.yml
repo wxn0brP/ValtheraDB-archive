@@ -6,6 +6,10 @@ inputs:
     description: "Path to the adapter file (default export returning ActionsBase)"
     required: false
     default: "./valthera-e2e/index.ts"
+  runtime:
+    description: "Runtime used to run the E2E suite: 'bun' or 'node'"
+    required: false
+    default: "bun"
 
 runs:
   using: "composite"
@@ -16,8 +20,23 @@ runs:
         ref: master
         path: __e2e__
 
-    - run: |
+    - if: inputs.runtime == 'bun'
+      run: |
         cd __e2e__
         bun install
         bun src/index.ts "${{ github.workspace }}/${{ inputs.adapter-path }}"
+      shell: bash
+
+    - if: inputs.runtime == 'node'
+      run: |
+        cd __e2e__
+        npm install --no-audit --no-fund
+        npm run build
+        node dist/node.js "${{ github.workspace }}/${{ inputs.adapter-path }}"
+      shell: bash
+
+    - if: inputs.runtime != 'bun' && inputs.runtime != 'node'
+      run: |
+        echo "Invalid runtime '${{ inputs.runtime }}'. Allowed values: bun, node"
+        exit 1
       shell: bash
