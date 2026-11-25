@@ -37,7 +37,7 @@ export function createDirIndexAdapter(
 }
 
 export const DYNAMIC = {
-	"dir-index": (
+	def: (
 		dir: string,
 		indexConfig: IndexConfig = {},
 		dirConfig: DirIndexOpts = {},
