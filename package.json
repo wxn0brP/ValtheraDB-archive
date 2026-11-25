@@ -23,12 +23,13 @@
     },
     "devDependencies": {
         "@types/bun": "*",
-        "@wxn0brp/db": "^0.120.3",
+        "@wxn0brp/biome": "*",
+        "@wxn0brp/db": "^0.130.0",
         "tsc-alias": "^1",
         "typescript": "^7"
     },
     "peerDependencies": {
-        "@wxn0brp/db-core": "^0.12.9"
+        "@wxn0brp/db-core": "^0.13.0"
     },
     "files": [
         "dist"
