@@ -1,5 +1,6 @@
 import { CustomFileCpu } from "@wxn0brp/db-core";
-import { CustomActionsBase } from "@wxn0brp/db-core/base/custom";
+import { CustomAdapterBase } from "@wxn0brp/db-core/base/customAdapter";
+import { pathRepair } from "@wxn0brp/db-core/base/customFileCpu";
 import { parse, stringify } from "csv/sync";
 import { access, mkdir, readdir, readFile, rm, writeFile } from "fs/promises";
 import { version } from "./version";
@@ -9,7 +10,7 @@ export interface Opts {
 	dir?: string;
 }
 
-export class DbStorageCsv extends CustomActionsBase {
+export class DbStorageCsv extends CustomAdapterBase {
 	version = version;
 
 	constructor(public opts: Opts) {
@@ -24,7 +25,7 @@ export class DbStorageCsv extends CustomActionsBase {
 		if (this.opts.file) {
 			return this.opts.file;
 		} else if (this.opts.dir) {
-			return this.opts.dir + "/" + collection + ".csv";
+			return this.opts.dir + "/" + pathRepair(collection) + ".csv";
 		}
 	}
 
@@ -119,7 +120,9 @@ export class DbStorageCsv extends CustomActionsBase {
 	}
 
 	async removeCollection(collection: string): Promise<boolean> {
-		await rm(this._getPath(collection));
+		await rm(this._getPath(collection), {
+			force: true,
+		});
 		return true;
 	}
 }

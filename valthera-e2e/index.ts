@@ -1,4 +1,4 @@
-import { DbStorageCsv } from "../src/action.js";
+import { DbStorageCsv } from "../src/adapter.js";
 
 const TEST_DIR = "/tmp/valthera-e2e-csv-test";
 

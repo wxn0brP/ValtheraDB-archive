@@ -22,8 +22,8 @@
         "build": "tsc && tsc-alias"
     },
     "dependencies": {
-        "@wxn0brp/db-core": "^0.12.2",
-        "csv": "^6.6.3"
+        "@wxn0brp/db-core": "^0.13.0",
+        "csv": "^6.6.4"
     },
     "devDependencies": {
         "@types/bun": "*",
