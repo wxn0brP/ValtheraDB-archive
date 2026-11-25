@@ -1,13 +1,18 @@
-import { ValtheraClass } from "@wxn0brp/db-core";
-import { DbStorageXlsx, Opts } from "./action";
+import { forgeTypedValthera, ValtheraClass } from "@wxn0brp/db-core";
+import { Data } from "@wxn0brp/db-core/types/data";
+import { TypedValthera } from "@wxn0brp/db-core/types/typed";
+import { DbStorageXlsx, Opts } from "./adapter";
 
-export function createXlsxValthera(opts: Opts) {
+export function createXlsxValthera<T extends Record<string, Data>>(
+	opts: Opts,
+): TypedValthera<T, ValtheraClass> {
 	const xlsxStorage = new DbStorageXlsx(opts);
-	return new ValtheraClass({
+	const db = new ValtheraClass({
 		adapter: xlsxStorage,
 	});
+	return forgeTypedValthera(db) as any;
 }
 
 export const DYNAMIC = {
-	xlsx: (opts: Opts) => new DbStorageXlsx(opts),
+	def: (opts: Opts) => new DbStorageXlsx(opts),
 };

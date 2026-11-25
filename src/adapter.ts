@@ -1,7 +1,8 @@
-import { CustomFileCpu } from "@wxn0brp/db-core";
-import { CustomActionsBase } from "@wxn0brp/db-core/base/custom";
+import { CustomAdapterBase } from "@wxn0brp/db-core/base/customAdapter";
+import { CustomFileCpu, pathRepair } from "@wxn0brp/db-core/base/customFileCpu";
 import ExcelJS from "exceljs";
 import { access, mkdir, readdir, rm } from "fs/promises";
+import { version } from "./version";
 
 export interface Opts {
 	file?: string;
@@ -11,7 +12,14 @@ export interface Opts {
 /** U+2400 */
 export const NULL_VALUE = "␀";
 
-export class DbStorageXlsx extends CustomActionsBase {
+export class DbStorageXlsx extends CustomAdapterBase {
+	version = version;
+	capabilities = {
+		transactions: false,
+		indexes: false,
+		persistent: true,
+	};
+
 	constructor(public opts: Opts) {
 		super();
 		this.fileCpu = new CustomFileCpu(
@@ -24,7 +32,7 @@ export class DbStorageXlsx extends CustomActionsBase {
 		if (this.opts.file) {
 			return this.opts.file;
 		} else if (this.opts.dir) {
-			return this.opts.dir + "/" + collection + ".xlsx";
+			return pathRepair(this.opts.dir + "/" + collection + ".xlsx");
 		}
 		return "";
 	}
@@ -243,7 +251,9 @@ export class DbStorageXlsx extends CustomActionsBase {
 				return false;
 			}
 		} else {
-			await rm(this._getPath(collection));
+			await rm(this._getPath(collection), {
+				force: true,
+			});
 			return true;
 		}
 	}

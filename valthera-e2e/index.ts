@@ -1,4 +1,4 @@
-import { DbStorageXlsx } from "../src/action.js";
+import { DbStorageXlsx } from "../src/adapter.js";
 
 const TEST_DIR = "/tmp/valthera-e2e-xlsx-test";
 
