@@ -32,8 +32,8 @@ export async function createAdapter(opts: Opts, retry = false) {
 
 	if (pkg === "memory") {
 		if (!memoryActions) {
-			const mod = await import("@wxn0brp/db-core/db/memory");
-			memoryActions = mod.MemoryAction;
+			const mod = await import("@wxn0brp/db-core/adapters/memoryAdapter");
+			memoryActions = mod.MemoryAdapter;
 		}
 		return new memoryActions();
 	}
