@@ -195,20 +195,15 @@ user
 	.command("token <user_id_or_login> [time] [match_chars]")
 	.description("Get a token for a user")
 	.action(async (user_id_or_login, time, match_chars) => {
-		const user = await internalDB.findOne<{
-			_id: string;
-		}>({
-			collection: "user",
-			search: {
-				$or: [
-					{
-						login: user_id_or_login,
-					},
-					{
-						_id: user_id_or_login,
-					},
-				],
-			},
+		const user = await internalDB.user.findOne({
+			$or: [
+				{
+					login: user_id_or_login,
+				},
+				{
+					_id: user_id_or_login,
+				},
+			],
 		});
 
 		if (!user) {

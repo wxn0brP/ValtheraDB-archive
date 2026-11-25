@@ -2,7 +2,6 @@ import { Id, Relation, RelationTypes, ValtheraCompatible } from "@wxn0brp/db";
 import { RemoteConfig, ValtheraRemote } from "@wxn0brp/db-client";
 import { Valthera } from "@wxn0brp/db/valthera";
 import { Router } from "@wxn0brp/falcon-frame";
-import { changeStringToFunction } from "@wxn0brp/wts-run-fn";
 import { dataCenter } from "../init/initDataBases";
 import { runtime_dir } from "../init/vars";
 import { isPathSafe } from "../utils/path";
@@ -164,10 +163,16 @@ relationRouter.post("/:type", async (req, res) => {
 				msg: "invalid accessCfg collection " + JSON.stringify(check),
 			});
 
-		let search = params.shift() as string | Object;
-		if (typeof search === "string") search = changeStringToFunction(search);
-		else if (search && typeof search === "object")
-			search = deserializeRegex(search);
+		let search = params.shift();
+		if (
+			search !== undefined &&
+			(search === null || typeof search !== "object" || Array.isArray(search))
+		)
+			return res.status(400).json({
+				err: true,
+				msg: "search must be an object",
+			});
+		if (search) search = deserializeRegex(search);
 
 		const relationFn = relation[type] as (...args: any[]) => Promise<any>;
 		const result = await relationFn(collection, search, ...(params as any[]));

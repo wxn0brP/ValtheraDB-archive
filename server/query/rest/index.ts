@@ -18,7 +18,6 @@ router.get("/:db/:collection", async (req, res) => {
 		dbName: db,
 		userId: req.user._id,
 		query,
-		keys: [],
 	});
 
 	result.ff(res);
@@ -38,7 +37,6 @@ router.post("/:db/:collection", async (req, res) => {
 		dbName: db,
 		userId: req.user._id,
 		query,
-		keys: [],
 	});
 
 	result.ff(res);
@@ -59,7 +57,6 @@ router.patch("/:db/:collection", async (req, res) => {
 		dbName: db,
 		userId: req.user._id,
 		query,
-		keys: [],
 	});
 
 	result.ff(res);
@@ -79,7 +76,6 @@ router.delete("/:db/:collection", async (req, res) => {
 		dbName: db,
 		userId: req.user._id,
 		query,
-		keys: [],
 	});
 
 	result.ff(res);
@@ -99,7 +95,6 @@ router.get("/one/:db/:collection", async (req, res) => {
 		dbName: db,
 		userId: req.user._id,
 		query,
-		keys: [],
 	});
 
 	result.ff(res);
@@ -120,7 +115,6 @@ router.patch("/one/:db/:collection", async (req, res) => {
 		dbName: db,
 		userId: req.user._id,
 		query,
-		keys: [],
 	});
 
 	result.ff(res);
@@ -140,7 +134,6 @@ router.delete("/one/:db/:collection", async (req, res) => {
 		dbName: db,
 		userId: req.user._id,
 		query,
-		keys: [],
 	});
 
 	result.ff(res);

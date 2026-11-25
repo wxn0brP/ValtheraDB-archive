@@ -10,7 +10,6 @@ Operation is the URL parameter, database name in the body.
 |---|---|---|---|
 | `db` | `string` | yes | Database name |
 | `query` | `object` | yes | Query object |
-| `keys` | `string[][]` | no | Paths to keys in `query` containing stringified functions to deserialize |
 | `auth` | `string` | no | Authentication token for the database |
 
 Header `Authorization: Bearer <token>` is also supported.

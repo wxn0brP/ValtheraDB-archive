@@ -1,9 +1,8 @@
 import { isValtheraError } from "@wxn0brp/db-core/errors";
-import type { AdapterCapabilities } from "@wxn0brp/db-core/types/action";
+import type { AdapterCapabilities } from "@wxn0brp/db-core/types/adapter";
 import { VQuery } from "@wxn0brp/db-core/types/query";
-import { isCollectionOp, isKnownOp } from "@wxn0brp/db-core/utils/opKind";
+import { getOpKind, isKnownOp } from "@wxn0brp/db-core/utils/opKind";
 import { FFResponse } from "@wxn0brp/falcon-frame";
-import { deserializeFunctions } from "@wxn0brp/wts-run-fn";
 import { dataCenter } from "../../init/initDataBases";
 import { runtime_dir } from "../../init/vars";
 import { isPathSafe } from "../../utils/path";
@@ -19,7 +18,6 @@ export interface Query {
 	// dbDir: string;
 	userId: string;
 	query: VQuery;
-	keys: string[][];
 	undefinedPaths?: string[][];
 }
 
@@ -145,7 +143,7 @@ function intersectCapabilities(caps: AdapterCapabilities) {
 }
 
 export async function dbLogic(serverQuery: Query): Promise<Response> {
-	const { type, dbName, userId, query, keys, undefinedPaths } = serverQuery;
+	const { type, dbName, userId, query, undefinedPaths } = serverQuery;
 	const res = new Response();
 
 	const dbObj = dataCenter[dbName];
@@ -217,16 +215,15 @@ export async function dbLogic(serverQuery: Query): Promise<Response> {
 		if (typeof query !== "object") return res.e(Codes.QUERY_REQ_OBJ);
 		if (!query.collection) return res.e(Codes.COLLECTION_REQ);
 
-		const withFns = deserializeFunctions(query, keys || []) as VQuery;
-		if (undefinedPaths?.length) restoreUndefined(withFns, undefinedPaths);
 		const parsedVQuery = (
-			withFns.search
+			query.search
 				? {
-						...withFns,
-						search: deserializeRegex(withFns.search),
+						...query,
+						search: deserializeRegex(query.search),
 					}
-				: withFns
+				: query
 		) as VQuery;
+		if (undefinedPaths?.length) restoreUndefined(parsedVQuery, undefinedPaths);
 
 		if (!isPathSafe(runtime_dir, dbDir, query.collection))
 			return res.e(Codes.INVALID_COLLECTION);
@@ -242,7 +239,7 @@ export async function dbLogic(serverQuery: Query): Promise<Response> {
 
 			touch(session);
 
-			if (isCollectionOp(type))
+			if (getOpKind(type) === "collection")
 				return res.r(
 					await db.execute(
 						type as any,
@@ -254,8 +251,11 @@ export async function dbLogic(serverQuery: Query): Promise<Response> {
 			return res.r(await db.execute(type as any, parsedVQuery, session.handle));
 		}
 
-		if (isCollectionOp(type))
+		if (getOpKind(type) === "collection")
 			return res.r(await db[type](parsedVQuery.collection));
+
+		if (getOpKind(type) === "index")
+			return res.r(await db.execute(type as any, parsedVQuery));
 
 		return res.r(await db[type](parsedVQuery));
 	} catch (err) {
