@@ -1,2 +1,1 @@
-export const publishToNpm = false;
-export const typeDocs = 2;
+export const publishToNpm = true;
