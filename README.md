@@ -14,7 +14,7 @@ npm i @wxn0brp/db-lock @wxn0brp/db-core
 import { ValtheraClass } from "@wxn0brp/db-core";
 import { createLockPlugin } from "@wxn0brp/db-lock";
 
-const db = ValtheraClass(...);
+const db = new ValtheraClass(...);
 db.plugin(createLockPlugin());
 
 await db.add({ collection: "users", data: { name: "Alice" } });
