@@ -16,7 +16,7 @@
         "build": "tsc && tsc-alias"
     },
     "dependencies": {
-        "@wxn0brp/db-core": "^0.12.7",
+        "@wxn0brp/db-core": "^0.13.0",
         "rocksdb": "^5.2.1"
     },
     "devDependencies": {

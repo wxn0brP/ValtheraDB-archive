@@ -1,11 +1,11 @@
 import { forgeTypedValthera, ValtheraClass } from "@wxn0brp/db-core";
-import { ActionsBase } from "@wxn0brp/db-core/base/actions";
+import { AdapterBase } from "@wxn0brp/db-core/base/adapter";
 import { addId } from "@wxn0brp/db-core/helpers/addId";
 import { Data, DataInternal } from "@wxn0brp/db-core/types/data";
 import { VQueryT } from "@wxn0brp/db-core/types/query";
-import { findUtil } from "@wxn0brp/db-core/utils/action";
+import { findUtil } from "@wxn0brp/db-core/utils/findUtil";
 import { matchObj, updateObj } from "@wxn0brp/db-core/utils/process";
-import { updateFindObject } from "@wxn0brp/db-core/utils/updateFindObject";
+import { updateFindObject } from "@wxn0brp/db-core/utils/projection";
 import rocksdb from "rocksdb";
 import {
 	COLLECTION_PREFIX,
@@ -29,7 +29,7 @@ import { version } from "./version";
 
 export * from "./types";
 
-export class RocksValthera extends ActionsBase {
+export class RocksAdapter extends AdapterBase {
 	_inited = false;
 	db: RocksDb;
 	version = version;
@@ -217,7 +217,7 @@ export function createRocksValthera<T extends Record<string, Data> = {}>(
 	location: string,
 	opts?: RocksOpenOptions,
 ) {
-	const adapter = new RocksValthera(location, opts);
+	const adapter = new RocksAdapter(location, opts);
 	const db = new ValtheraClass({
 		adapter,
 	});
@@ -225,7 +225,7 @@ export function createRocksValthera<T extends Record<string, Data> = {}>(
 }
 
 export const DYNAMIC = {
-	rocks(location: string, opts?: RocksOpenOptions) {
-		return new RocksValthera(location, opts);
+	def(location: string, opts?: RocksOpenOptions) {
+		return new RocksAdapter(location, opts);
 	},
 };
