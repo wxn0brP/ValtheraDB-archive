@@ -1,7 +1,7 @@
 # @wxn0brp/db-redis-cache
 
 A Redis caching plugin for ValtheraDB.
-Caches read operations (`find`, `findOne`) and automatically invalidates cached results when a collection is mutated.
+Caches read operations (`find`, `findOne`, `count`) and automatically invalidates cached results when a collection is mutated. Reads executed inside a transaction bypass the cache.
 
 ## Installation
 

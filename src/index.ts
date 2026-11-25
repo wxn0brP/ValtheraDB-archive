@@ -2,23 +2,18 @@ import { ValtheraPlugin } from "@wxn0brp/db-core/types/plugin";
 import { createHash } from "crypto";
 import { RedisCacheOpts } from "./types";
 
-const READ_OPS = new Set([
-	"find",
-	"findOne",
-]);
-const MUTATION_OPS = new Set([
-	"add",
-	"update",
-	"updateOne",
-	"updateOneOrAdd",
-	"remove",
-	"removeOne",
-	"toggleOne",
-]);
+const TAG = "\u0000";
 
-function stableStringify(value: any) {
-	if (value === null || value === undefined) return String(value);
-	if (value instanceof RegExp) return value.toString();
+function stableStringify(value: any): string {
+	if (value === null) return "null";
+	if (value === undefined) return `${TAG}undefined`;
+	if (value instanceof RegExp) return `${TAG}regexp:${value.toString()}`;
+	if (value instanceof Date) {
+		const time = value.getTime();
+		return `${TAG}date:${Number.isNaN(time) ? "invalid" : value.toISOString()}`;
+	}
+	if (typeof value === "bigint") return `${TAG}bigint:${value.toString()}`;
+	if (typeof value === "function") return `${TAG}function`;
 	if (typeof value !== "object") return JSON.stringify(value);
 	if (Array.isArray(value))
 		return "[" + value.map(stableStringify).join(",") + "]";
@@ -34,14 +29,6 @@ function stableStringify(value: any) {
 
 function hashKey(str: string) {
 	return createHash("sha256").update(str).digest("hex").slice(0, 16);
-}
-
-function hasFunction(value: any) {
-	if (typeof value === "function") return true;
-	if (value === null || value === undefined) return false;
-	if (typeof value !== "object") return false;
-	if (Array.isArray(value)) return value.some(hasFunction);
-	return Object.values(value).some(hasFunction);
 }
 
 export function createRedisCachePlugin(opts: RedisCacheOpts): ValtheraPlugin {
@@ -62,12 +49,13 @@ export function createRedisCachePlugin(opts: RedisCacheOpts): ValtheraPlugin {
 		return true;
 	}
 
-	function buildKey(collection: string, query: any) {
+	function buildKey(op: string, collection: string, query: any) {
 		const serialized = stableStringify({
+			op,
 			collection,
-			search: query.search,
-			findOpts: query.findOpts,
-			dbFindOpts: query.dbFindOpts,
+			search: query?.search,
+			findOpts: query?.findOpts,
+			dbFindOpts: query?.dbFindOpts,
 		});
 		const hash = hashKey(serialized);
 		const key = `${prefix}:${collection}:${hash}`;
@@ -96,17 +84,18 @@ export function createRedisCachePlugin(opts: RedisCacheOpts): ValtheraPlugin {
 	return {
 		name: "redis-cache",
 		async execute(ctx) {
-			const collection =
-				typeof ctx.query === "string" ? ctx.query : ctx.query?.collection;
-
+			const collection = ctx.collection;
 			if (!collection || !shouldCache(collection)) {
 				return ctx.next();
 			}
 
-			if (READ_OPS.has(ctx.op)) {
-				if (hasFunction(ctx.query)) return ctx.next();
+			const inTransaction =
+				!!ctx.query && typeof ctx.query === "object" && !!ctx.query.transaction;
 
-				const key = buildKey(collection, ctx.query);
+			if (ctx.kind === "read") {
+				if (inTransaction) return ctx.next();
+
+				const key = buildKey(ctx.op, collection, ctx.query);
 				const cached = await client.get(key);
 				if (cached !== null) {
 					return JSON.parse(cached);
@@ -118,7 +107,11 @@ export function createRedisCachePlugin(opts: RedisCacheOpts): ValtheraPlugin {
 				return result;
 			}
 
-			if (MUTATION_OPS.has(ctx.op)) {
+			if (
+				ctx.kind === "write" ||
+				ctx.kind === "delete" ||
+				ctx.op === "removeCollection"
+			) {
 				const result = await ctx.next();
 				await invalidateCollection(collection);
 				return result;
