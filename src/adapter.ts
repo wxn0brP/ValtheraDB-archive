@@ -1,6 +1,7 @@
-import { CustomFileCpu } from "@wxn0brp/db-core";
-import { CustomActionsBase } from "@wxn0brp/db-core/base/custom";
+import { CustomAdapterBase } from "@wxn0brp/db-core/base/customAdapter";
+import { CustomFileCpu, pathRepair } from "@wxn0brp/db-core/base/customFileCpu";
 import { access, mkdir, readdir, readFile, rm, writeFile } from "fs/promises";
+import { version } from "./version";
 
 export type FieldType =
 	| "string"
@@ -185,7 +186,14 @@ function writeField(
 	return buf;
 }
 
-export class DbStorageLength extends CustomActionsBase {
+export class DbStorageLength extends CustomAdapterBase {
+	version = version;
+	capabilities = {
+		transactions: false,
+		indexes: false,
+		persistent: true,
+	};
+
 	constructor(public opts: Opts) {
 		super();
 		this.fileCpu = new CustomFileCpu(
@@ -197,7 +205,9 @@ export class DbStorageLength extends CustomActionsBase {
 	_getPath(collection: string) {
 		if (this.opts.file) return this.opts.file;
 		else if (this.opts.dir)
-			return this.opts.dir + "/" + collection + "." + (this.opts.ext || "dat");
+			return pathRepair(
+				this.opts.dir + "/" + collection + "." + (this.opts.ext || "dat"),
+			);
 	}
 
 	async read(collection: string) {

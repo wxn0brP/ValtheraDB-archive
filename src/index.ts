@@ -1,5 +1,5 @@
 import { ValtheraClass } from "@wxn0brp/db-core";
-import { DbStorageLength, Opts } from "./action";
+import { DbStorageLength, Opts } from "./adapter";
 
 export function createLengthValthera(opts: Opts) {
 	return new ValtheraClass({
@@ -8,5 +8,5 @@ export function createLengthValthera(opts: Opts) {
 }
 
 export const DYNAMIC = {
-	length: (opts: Opts) => new DbStorageLength(opts),
+	def: (opts: Opts) => new DbStorageLength(opts),
 };
