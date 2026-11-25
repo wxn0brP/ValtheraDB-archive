@@ -14,7 +14,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Microsoft Access Database Engine
+        run: winget install --id Microsoft.AccessDatabaseEngine.2016 -e --silent --accept-source-agreements --accept-package-agreements
+
+      - name: Verify ODBC driver
+        shell: powershell
+        run: |
+          $driver = Get-OdbcDriver | Where-Object { $_.Name -like "*Access*" }
+          if (-not $driver) { throw "Microsoft Access ODBC driver not found" }
+          $driver | Format-Table Name, Platform
+
+      - name: Run E2E tests
+        uses: wxn0brP/valtheraDB-e2e@master
+        with:
+          adapter-path: ./valthera-e2e/index.js
+          runtime: node
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
