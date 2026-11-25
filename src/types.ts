@@ -10,7 +10,12 @@ export interface RedisLikeClient {
 		cursor: string | number,
 		match: string,
 		pattern: string,
-	): Promise<[string, string[]]>;
+	): Promise<
+		[
+			string,
+			string[],
+		]
+	>;
 }
 
 export interface RedisCacheOpts {
