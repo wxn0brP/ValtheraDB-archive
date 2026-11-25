@@ -1,4 +1,4 @@
-import { ActionsBaseInterface } from "@wxn0brp/db-core/types/action";
+import { AdapterBaseInterface } from "@wxn0brp/db-core/types/adapter";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { type BenchResult } from "./run";
@@ -15,7 +15,7 @@ process.on("unhandledRejection", reason => {
 
 export async function loadCustomSetup(
 	adapterName: string,
-	adapter: ActionsBaseInterface,
+	adapter: AdapterBaseInterface,
 ): Promise<() => Promise<void>> {
 	const setupPath = resolve(import.meta.dirname, "custom", `${adapterName}.js`);
 	let onAfterAdd = async () => {};
