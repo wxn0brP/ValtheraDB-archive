@@ -1,4 +1,5 @@
 import {
+	assertSafeFieldPath,
 	COLLECTION_SRC,
 	FIELD_SRC,
 	parseReturn,
@@ -96,6 +97,7 @@ function parseIndexFields(raw: string): string[] {
 		.filter(Boolean);
 	if (!fields.length) throw new Error("Index requires at least one field");
 	for (const field of fields) {
+		assertSafeFieldPath(field, "index field");
 		if (!/^[\w./]+$/.test(field))
 			throw new Error(`Invalid index field '${field}'`);
 	}

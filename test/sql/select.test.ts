@@ -159,7 +159,7 @@ describe("SQL Parser - SELECT", () => {
 		const parsedQuery = sqlParser.parse(query);
 		expect(parsedQuery.query.search).toEqual({
 			$regex: {
-				name: "^.*John.*$",
+				name: /^.*John.*$/,
 			},
 		});
 	});
@@ -170,7 +170,7 @@ describe("SQL Parser - SELECT", () => {
 		expect(parsedQuery.query.search).toEqual({
 			$not: {
 				$regex: {
-					name: "^.*John.*$",
+					name: /^.*John.*$/,
 				},
 			},
 		});
@@ -212,7 +212,7 @@ describe("SQL Parser - SELECT", () => {
 		const parsedQuery = sqlParser.parse(query);
 		expect(parsedQuery.query.search).toEqual({
 			$regex: {
-				name: "(?i)^.*john.*$",
+				name: /^.*john.*$/i,
 			},
 		});
 	});
@@ -223,7 +223,7 @@ describe("SQL Parser - SELECT", () => {
 		expect(parsedQuery.query.search).toEqual({
 			$not: {
 				$regex: {
-					name: "(?i)^.*john.*$",
+					name: /^.*john.*$/i,
 				},
 			},
 		});

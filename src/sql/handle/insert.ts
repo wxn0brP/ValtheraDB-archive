@@ -1,5 +1,10 @@
-import { parseNum, parseReturn, parseSet } from "#sql/utils";
-import { removeQuotes } from "#sql/utils";
+import {
+	assertSafeFieldPath,
+	parseNum,
+	parseReturn,
+	parseSet,
+	removeQuotes,
+} from "#sql/utils";
 
 export function handleInsert(query: string) {
 	const match = query.match(
@@ -8,6 +13,8 @@ export function handleInsert(query: string) {
 	if (!match) throw new Error("Invalid INSERT syntax");
 	const collection = removeQuotes(match[1]);
 	const keys = match[2].split(/\s*,\s*/);
+	for (const key of keys)
+		assertSafeFieldPath(removeQuotes(key), "INSERT column");
 	let rest = match[3].trim();
 
 	let onDuplicateUpdate: string | null = null;

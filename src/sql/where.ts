@@ -1,7 +1,7 @@
 // It’s cheap - it’s cheap
 // It’s good - it’s cheap
 
-import { lastPathPart } from "#sql/utils";
+import { assertSafeFieldPath, isUnsafeKey, lastPathPart } from "#sql/utils";
 
 type QueryObject = Record<string, any>;
 
@@ -27,26 +27,28 @@ function escapeRegex(string: string) {
 function likeToRegex(pattern: string, caseInsensitive: boolean = false) {
 	const escaped = escapeRegex(pattern);
 	const converted = escaped.replace(/%/g, ".*").replace(/_/g, ".");
-	return `${caseInsensitive ? "(?i)" : ""}^${converted}$`;
+	return new RegExp(`^${converted}$`, caseInsensitive ? "i" : "");
 }
 
 function mergeQueries(target: QueryObject, source: QueryObject) {
-	for (const key in source) {
+	for (const [key, value] of Object.entries(source)) {
+		if (isUnsafeKey(key)) continue;
+		// If the key is an operator, simply add it
 		if (key.startsWith("$")) {
-			// If the key is an operator, simply add it
-			target[key] = source[key];
+			target[key] = value;
+			continue;
+		}
+		// If the key is a field and both sides are objects, merge them
+		const existing = target[key];
+		if (
+			existing !== undefined &&
+			typeof existing === "object" &&
+			existing !== null &&
+			!Array.isArray(existing)
+		) {
+			Object.assign(existing, value);
 		} else {
-			// If the key is a field, check if there is not already an operator in the target
-			if (target[key] !== undefined) {
-				// If target[key] is an object with an operator, merge the objects
-				if (typeof target[key] === "object" && !Array.isArray(target[key])) {
-					Object.assign(target[key], source[key]);
-				} else {
-					target[key] = source[key];
-				}
-			} else {
-				target[key] = source[key];
-			}
+			target[key] = value;
 		}
 	}
 }
@@ -145,6 +147,7 @@ export function parseWhere(where: string): QueryObject {
 			}
 
 			const key = lastPathPart(token);
+			assertSafeFieldPath(token, "WHERE field");
 			let opToken = tokens[++i]?.trim();
 			// Handle multi-word operators
 			if (opToken) {

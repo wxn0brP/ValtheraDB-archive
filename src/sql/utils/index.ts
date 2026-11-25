@@ -2,6 +2,11 @@ import { VQuery } from "@wxn0brp/db-core/types/query";
 import { ValtheraQuery } from "../../types";
 
 export const COLLECTION_SRC = '`[^`]+`|"[^"]+"|[\\w/]+';
+const UNSAFE_KEYS = new Set([
+	"__proto__",
+	"constructor",
+	"prototype",
+]);
 const FIELD_PART_SRC = '`[^`]+`|"[^"]+"|[\\w/]+';
 export const FIELD_SRC = `(?:${FIELD_PART_SRC})(?:\\.(?:${FIELD_PART_SRC}))*`;
 
@@ -25,8 +30,11 @@ export function parseSet(setString: string) {
 			if (!Number.isNaN(+value)) parsedValue = +value;
 			else parsedValue = removeQuotes(value);
 
+			const cleanKey = removeQuotes(key);
+			assertSafeFieldPath(cleanKey, "SET field");
+
 			return [
-				removeQuotes(key),
+				cleanKey,
 				parsedValue,
 			];
 		}),
@@ -72,6 +80,20 @@ export function splitOutsideQuotes(input: string, separator: string) {
 
 	parts.push(current.trim());
 	return parts;
+}
+
+/** Field names core filters out as prototype pollution hazards. */
+export function isUnsafeKey(key: string) {
+	return UNSAFE_KEYS.has(key);
+}
+
+/** Reject field names that core would silently ignore. */
+export function assertSafeFieldPath(value: string, context: string = "field") {
+	const parts = splitOutsideQuotes(value.trim(), ".").map(stripIdentQuotes);
+	for (const part of parts) {
+		if (isUnsafeKey(part))
+			throw new Error(`Unsafe ${context} '${part}' is not allowed`);
+	}
 }
 
 /** Last field in a path: `users`.`id` -> id */
